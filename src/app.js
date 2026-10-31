@@ -1,5 +1,6 @@
 import { aqiFromConcentration, cigarettesPerDay, combinedAqi, LEVELS, levelForAqi, nowcast, WHO_PM25_24H } from './aqi.js';
 import { fetchAirQuality, fetchSample } from './api.js';
+import { downloadIcs, googleCalendarUrl, localToUtc } from './calendar.js';
 import { renderChart } from './chart.js';
 import { CITIES } from './cities.js';
 import { el, int, num } from './format.js';
@@ -12,8 +13,11 @@ import {
   ORG_PRESETS,
   PROFILES,
   reductionPct,
+  VENT_STATUSES,
+  ventilationPlan,
   windowStats,
 } from './planner.js';
+import { fetchStations, nearestStation } from './stations.js';
 import { addDays, datePart, dayLabel, formatClock, hourOf, parseClock, shortDate, weekday } from './time.js';
 
 const $ = (id) => document.getElementById(id);
@@ -69,7 +73,11 @@ const state = {
   },
   series: null,
   best: [],
+  stations: [],
 };
+
+// Màu của 3 trạng thái cửa sổ lấy theo mức VN_AQI tương ứng (Tốt / Trung bình / Kém trở lên).
+const VENT_COLORS = { open: LEVELS[0].display, brief: LEVELS[1].display, closed: LEVELS[2].display };
 
 // ---------- Điều khiển dùng chung ----------
 
@@ -110,6 +118,29 @@ function windowLabel(w) {
   return {
     day: dayLabel(datePart(t), todayStr()),
     range: `${formatClock(h)}–${formatClock(h + w.hours)}`,
+  };
+}
+
+function placeName() {
+  return state.series.source === 'sample' ? 'Hà Nội' : place().name;
+}
+
+function calendarEvent(w) {
+  const s = state.series;
+  const act = ACTIVITIES.find((a) => a.id === state.activity);
+  const startLocal = s.times[w.start];
+  const start = localToUtc(startLocal, s.utcOffsetSeconds);
+  return {
+    uid: `${startLocal}-${act.id}@clearhour`,
+    title: `${act.icon} ${act.short} – giờ ít bụi mịn`,
+    description:
+      `PM2.5 dự báo trung bình ${num(w.mean)} µg/m³ (${levelForAqi(w.aqi).label}).\n` +
+      `Gợi ý từ ClearHour: ${location.origin}${location.pathname}\n` +
+      'Dự báo mang tính tham khảo, hãy xem lại trước khi ra ngoài.',
+    location: placeName(),
+    start,
+    end: new Date(start.getTime() + w.hours * 3600e3),
+    fileName: `clearhour-${act.id}-${startLocal.slice(0, 13).replace('T', '-')}h.ics`,
   };
 }
 
@@ -156,6 +187,7 @@ function renderAll() {
   renderMeta();
   renderNow();
   renderPlanner();
+  renderVentilation();
   renderChartSection();
   renderOrg();
   syncUrl();
@@ -193,6 +225,7 @@ function renderNow() {
     el('small', { class: 'sub' }, `TB hôm nay ${num(mean)} µg/m³`),
   );
   $('now-cig').textContent = num(cigarettesPerDay(mean));
+  renderStation();
 
   radioGroup($('profiles'), PROFILES, state.profile, (id) => {
     state.profile = id;
@@ -206,6 +239,32 @@ function renderNow() {
     el('strong', {}, `${profile.short}: `),
     advice,
     profile.sensitive ? ' (thuộc nhóm nhạy cảm theo QĐ 1459)' : '',
+  );
+}
+
+/** Đối chiếu dự báo mô hình với số đo của trạm gần nhất (nếu có dữ liệu trạm). */
+function renderStation() {
+  const s = state.series;
+  const row = $('station-row');
+  if (s.source === 'sample' || !state.stations.length) {
+    row.hidden = true;
+    return;
+  }
+  row.hidden = false;
+  const p = place();
+  const st = nearestStation(state.stations, p.lat, p.lon);
+  if (!st) {
+    $('station-meta').textContent = 'Không có số đo mới trong bán kính 30 km';
+    $('station-val').replaceChildren('–');
+    return;
+  }
+  const localTime = new Date(Date.parse(st.time) + s.utcOffsetSeconds * 1000).toISOString().slice(11, 16);
+  $('station-meta').textContent = `${st.name} · cách ${num(st.km)} km · ${localTime}${st.isMonitor ? '' : ' · cảm biến giá rẻ'}`;
+  $('station-val').replaceChildren(
+    num(st.pm25),
+    ' ',
+    el('small', {}, 'µg/m³'),
+    el('small', { class: 'sub' }, `mô hình dự báo: ${num(s.pm25[s.nowIndex])}`),
   );
 }
 
@@ -265,6 +324,7 @@ function renderPlanner() {
         const wl = windowLabel(worst);
         detail.push(`ít hơn ${reductionPct(w.mean, worst.mean)}% so với khung tệ nhất (${wl.day.toLowerCase()} ${wl.range})`);
       }
+      const ev = calendarEvent(w);
       out.push(
         el(
           'div',
@@ -273,6 +333,31 @@ function renderPlanner() {
           el('span', { class: 'window__time' }, `${day} · ${range}`),
           el('span', { class: 'window__level' }, levelPill(level, 'pill--sm')),
           el('span', { class: 'window__detail' }, detail.join(' · ')),
+          el(
+            'span',
+            { class: 'window__actions' },
+            el(
+              'a',
+              {
+                class: 'btn btn--ghost btn--xs',
+                href: googleCalendarUrl(ev),
+                target: '_blank',
+                rel: 'noopener',
+                'aria-label': `Thêm khung ${day.toLowerCase()} ${range} vào Google Lịch`,
+              },
+              '📅 Google Lịch',
+            ),
+            el(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn--ghost btn--xs',
+                'aria-label': `Tải tệp lịch .ics cho khung ${day.toLowerCase()} ${range}`,
+                onclick: () => downloadIcs(ev, ev.fileName),
+              },
+              '⬇ Tệp lịch .ics',
+            ),
+          ),
         ),
       );
     });
@@ -317,6 +402,79 @@ function renderPlanner() {
     ),
   );
   $('results').replaceChildren(...out);
+}
+
+function renderVentilation() {
+  const s = state.series;
+  const today = todayStr();
+  const profile = PROFILES.find((p) => p.id === state.profile);
+  const { slots, runs, best } = ventilationPlan(s, 24);
+  const at = (i) => `${dayLabel(datePart(s.times[i]), today)} ${s.times[i].slice(11, 16)}`;
+
+  // Gợi ý chính
+  const head = [];
+  if (best.length && best[0].mean <= VENT_STATUSES[1].max) {
+    head.push(
+      el('span', { class: 'vent__label' }, 'Giờ thông gió tốt nhất'),
+      ...best.map((w, i) =>
+        el(
+          'span',
+          { class: `vent__pick${i === 0 ? ' vent__pick--top' : ''}` },
+          `${windowLabel(w).day} ${windowLabel(w).range}`,
+          el('small', {}, ` · PM2.5 ~${num(w.mean)}`),
+        ),
+      ),
+    );
+  } else {
+    head.push(el('span', { class: 'vent__label' }, 'Bụi cao suốt 24 giờ tới: hạn chế mở cửa, ưu tiên máy lọc không khí.'));
+  }
+  $('vent-best').replaceChildren(...head);
+
+  // Dải 24 giờ
+  $('vent-strip').replaceChildren(
+    ...slots.map((sl) =>
+      el('span', {
+        style: { background: VENT_COLORS[sl.status.id] },
+        title: `${at(sl.index)} · PM2.5 ${num(sl.pm25)} µg/m³ · ${sl.status.label}`,
+      }),
+    ),
+  );
+  $('vent-strip').setAttribute('aria-label', `Trạng thái mở cửa sổ theo giờ trong ${slots.length} giờ tới`);
+  $('vent-axis').replaceChildren(
+    ...slots.map((sl, k) => {
+      const h = hourOf(sl.time);
+      const label = k === 0 ? 'Bây giờ' : k > 3 && h % 3 === 0 ? `${String(h).padStart(2, '0')}h` : '';
+      return el('span', { class: h === 0 ? 'is-midnight' : null }, label);
+    }),
+  );
+  $('vent-legend').replaceChildren(
+    ...VENT_STATUSES.map((st) => el('li', {}, el('i', { style: { background: VENT_COLORS[st.id] } }), st.label)),
+  );
+
+  // Các đoạn liên tiếp, dạng chữ
+  const runText = (r) => {
+    const t0 = s.times[r.start];
+    const t1 = s.times[r.end - 1];
+    const d0 = dayLabel(datePart(t0), today).toLowerCase();
+    const d1 = dayLabel(datePart(t1), today).toLowerCase();
+    const from = formatClock(hourOf(t0));
+    const to = formatClock(hourOf(t1) + 1);
+    return d0 === d1 ? `${from}–${to} ${d0}` : `${from} ${d0} – ${to} ${d1}`;
+  };
+  $('vent-runs').replaceChildren(
+    ...runs.slice(0, 6).map((r) =>
+      el(
+        'li',
+        {},
+        el('i', { style: { background: VENT_COLORS[r.status.id] }, 'aria-hidden': 'true' }),
+        el('span', {}, el('strong', {}, r.status.label), ` · ${runText(r)}`),
+      ),
+    ),
+  );
+
+  $('vent-tip').textContent =
+    (profile.sensitive ? `Nhà có ${profile.short.toLowerCase()}: chỉ nên mở cửa trong các giờ màu xanh. ` : '') +
+    'Khi mở, mở hai cửa đối diện 10–15 phút để không khí lưu thông nhanh. Khi đóng, hạn chế đốt nhang và chiên rán, bật máy lọc có màng HEPA nếu có.';
 }
 
 function renderChartSection() {
@@ -596,3 +754,7 @@ function initControls() {
 
 initControls();
 load();
+fetchStations().then((list) => {
+  state.stations = list;
+  if (state.series) renderStation();
+});

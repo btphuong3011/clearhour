@@ -15,6 +15,7 @@ export function normalize(raw, source) {
   return {
     source,
     timezone: raw.timezone,
+    utcOffsetSeconds: raw.utc_offset_seconds ?? 0,
     times,
     pm25: raw.hourly.pm2_5,
     pm10: raw.hourly.pm10,

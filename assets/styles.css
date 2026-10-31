@@ -558,6 +558,102 @@ main.is-loading .card {
   font-size: 13px;
   color: var(--caution);
 }
+.window__actions {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.btn--xs {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+/* ---------- Trong nhà ---------- */
+.vent__best {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.vent__label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+.vent__pick {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+}
+.vent__pick small {
+  font-weight: 500;
+  color: var(--muted);
+}
+.vent__pick--top {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.vent__timeline {
+  overflow: hidden;
+}
+.vent__strip,
+.vent__axis {
+  display: flex;
+  gap: 2px;
+}
+.vent__strip span {
+  flex: 1;
+  height: 28px;
+  border-radius: 3px;
+  min-width: 0;
+}
+.vent__axis span {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: visible;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.vent__axis span.is-midnight {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.vent__legend {
+  margin-top: 12px;
+}
+.vent__runs {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.vent__runs li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vent__runs i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+  transform: translateY(1px);
+}
+.vent__tip {
+  margin-top: 12px;
+}
 
 /* ---------- Chart ---------- */
 .legend {

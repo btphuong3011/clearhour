@@ -2,7 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalize } from '../src/api.js';
-import { candidateStarts, dailyMean, evaluateSlot, findBestWindows, reductionPct, windowStats } from '../src/planner.js';
+import {
+  candidateStarts,
+  dailyMean,
+  evaluateSlot,
+  findBestWindows,
+  reductionPct,
+  ventilationPlan,
+  ventStatus,
+  windowStats,
+} from '../src/planner.js';
 
 /** Chuỗi 3 ngày giả lập, bắt đầu 00:00 ngày 2026-11-01, "bây giờ" là 06:00. */
 function makeSeries(values, nowIndex = 6) {
@@ -68,4 +77,30 @@ test('chuẩn hóa dữ liệu mẫu Open-Meteo và xác định giờ hiện t�
   const s = normalize(raw, 'sample');
   assert.equal(s.times[s.nowIndex].slice(0, 13), raw.current.time.slice(0, 13));
   assert.equal(s.pm25.length, s.times.length);
+});
+
+test('trạng thái cửa sổ theo ngưỡng 25 và 50 µg/m³', () => {
+  assert.equal(ventStatus(25).id, 'open');
+  assert.equal(ventStatus(25.1).id, 'brief');
+  assert.equal(ventStatus(50).id, 'brief');
+  assert.equal(ventStatus(50.1).id, 'closed');
+});
+
+test('kế hoạch mở cửa sổ 24 giờ: gom các giờ liên tiếp và chọn giờ thông gió tốt nhất', () => {
+  const plan = ventilationPlan(series, 24);
+  assert.equal(plan.slots.length, 24);
+  assert.deepEqual(
+    plan.runs.map((r) => [r.status.id, r.start, r.end]),
+    [
+      ['closed', 6, 7],
+      ['brief', 7, 9],
+      ['open', 9, 21],
+      ['brief', 21, 24],
+      ['closed', 24, 30],
+    ],
+  );
+  assert.deepEqual(
+    plan.best.map((w) => w.start),
+    [11, 15],
+  );
 });

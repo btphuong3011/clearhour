@@ -45,6 +45,7 @@
         </a>
         <nav class="topnav" aria-label="Mục chính">
           <a href="#ca-nhan">Cá nhân</a>
+          <a href="#trong-nha">Trong nhà</a>
           <a href="#to-chuc">Trường học &amp; DN</a>
           <a href="#du-an">Về dự án</a>
         </nav>
@@ -92,6 +93,10 @@
                 <dt>Hít thở cả ngày hôm nay tương đương</dt>
                 <dd><span id="now-cig">–</span> <small>điếu thuốc lá</small></dd>
               </div>
+              <div id="station-row" hidden>
+                <dt>Trạm đo gần nhất <small class="sub" id="station-meta"></small></dt>
+                <dd id="station-val">–</dd>
+              </div>
             </dl>
           </div>
           <div class="profile">
@@ -137,6 +142,26 @@
           </div>
           <div id="results" class="results" aria-live="polite"></div>
         </article>
+      </section>
+
+      <section id="trong-nha" class="card vent" aria-labelledby="vent-title">
+        <header class="card__head card__head--wrap">
+          <div>
+            <h2 id="vent-title" class="title">Trong nhà: khi nào mở cửa sổ?</h2>
+            <p class="muted small">
+              Không khí trong nhà cũng cần thay mới (hơi nấu ăn, độ ẩm, CO₂). Mở cửa vào giờ bụi thấp để thông gió mà không
+              đưa thêm bụi mịn vào nhà.
+            </p>
+          </div>
+        </header>
+        <div class="vent__best" id="vent-best"></div>
+        <div class="vent__timeline">
+          <div class="vent__strip" id="vent-strip" role="img"></div>
+          <div class="vent__axis" id="vent-axis" aria-hidden="true"></div>
+        </div>
+        <ul class="legend vent__legend" id="vent-legend" aria-label="Chú giải trạng thái cửa sổ"></ul>
+        <ul class="vent__runs" id="vent-runs"></ul>
+        <p class="muted small vent__tip" id="vent-tip"></p>
       </section>
 
       <section class="card chart-card" aria-labelledby="chart-title">
@@ -229,7 +254,10 @@
           <article class="card">
             <h3>Giới hạn cần biết</h3>
             <ul class="bullets">
-              <li>Đây là <strong>dữ liệu dự báo từ mô hình</strong> (ô lưới khoảng 45 km), không thay thế số liệu trạm quan trắc chính thức.</li>
+              <li>
+                Đây là <strong>dữ liệu dự báo từ mô hình</strong> (ô lưới khoảng 45 km), không thay thế số liệu trạm quan trắc chính thức.
+                Số đo của trạm gần nhất (OpenAQ, cập nhật mỗi giờ) được hiện kèm để bạn đối chiếu.
+              </li>
               <li>Nồng độ sát mặt đường đông xe thường cao hơn mức nền của mô hình.</li>
               <li>Lượng bụi hít vào chỉ là ước tính theo mức thông khí trung bình của người trưởng thành.</li>
               <li>Không phải lời khuyên y tế. Người có bệnh nền hãy làm theo hướng dẫn của bác sĩ.</li>
@@ -238,10 +266,11 @@
           <article class="card">
             <h3>Hướng phát triển</h3>
             <ul class="bullets">
-              <li>Hiệu chỉnh dự báo bằng dữ liệu trạm quan trắc và cảm biến giá rẻ (học máy) để có độ chi tiết theo quận, phường.</li>
-              <li>Nhắc lịch qua Zalo OA hoặc thông báo đẩy: "Chiều nay 15h–17h là khung chạy bộ tốt nhất".</li>
-              <li>Bảng điều khiển cho trường học và doanh nghiệp: lịch sử, báo cáo giảm phơi nhiễm theo tháng.</li>
-              <li>Gợi ý tuyến đường ít ô nhiễm khi có dữ liệu chi tiết theo không gian.</li>
+              <li>Hiệu chỉnh dự báo bằng học máy dựa trên độ lệch giữa mô hình và số đo trạm, hướng tới độ chi tiết theo quận, phường.</li>
+              <li>Nhắc lịch qua bot Telegram / Zalo OA: "Chiều mai 16h–17h là khung chạy bộ tốt nhất".</li>
+              <li>Nhật ký phơi nhiễm: "Tháng này bạn tránh được X µg bụi mịn", đo được tác động thật.</li>
+              <li>Trợ lý AI trả lời câu hỏi tự do dựa trên dữ liệu và khuyến nghị của QĐ 1459.</li>
+              <li>Gói trả phí cho trường học, doanh nghiệp giao hàng: xếp ca theo dự báo, báo cáo phơi nhiễm hằng tháng.</li>
             </ul>
           </article>
         </div>
@@ -256,7 +285,7 @@
         </p>
         <p class="muted small">
           Dữ liệu: <a href="https://open-meteo.com/" rel="noopener">Open-Meteo.com</a>, CAMS ENSEMBLE – Copernicus Atmosphere
-          Monitoring Service. VN_AQI theo QĐ 1459/QĐ-TCMT (2019). Ngưỡng tham chiếu: WHO Air Quality Guidelines (2021).
+          Monitoring Service. Số đo trạm: <a href="https://openaq.org/" rel="noopener">OpenAQ</a>. VN_AQI theo QĐ 1459/QĐ-TCMT (2019). Ngưỡng tham chiếu: WHO Air Quality Guidelines (2021).
           Quy đổi điếu thuốc: Berkeley Earth. Mức thông khí: US EPA Exposure Factors Handbook (2011).
         </p>
       </div>

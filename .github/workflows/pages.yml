@@ -1,0 +1,51 @@
+# Chạy test, lấy số đo trạm mới nhất từ OpenAQ rồi đưa trang lên GitHub Pages.
+# Chạy mỗi khi đẩy code lên main và mỗi giờ một lần để cập nhật data/stations.json
+# (không tạo commit mới, dữ liệu chỉ nằm trong bản deploy).
+
+name: Deploy ClearHour
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Chạy test
+        run: npm test
+
+      - name: Lấy số đo trạm từ OpenAQ
+        run: node scripts/fetch-stations.mjs data/stations.json
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

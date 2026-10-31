@@ -51,16 +51,19 @@ export function windowStats(pm25, start, hours, ventilation = 1) {
   };
 }
 
-/** Các giờ bắt đầu hợp lệ: từ giờ hiện tại trở đi, nằm trọn trong khung giờ cho phép của cùng một ngày. */
+/**
+ * Các giờ bắt đầu hợp lệ: từ giờ hiện tại trở đi, nằm trọn trong khung giờ cho phép của cùng một ngày.
+ * scope: 'today' | 'tomorrow' | 'all' (3 ngày) | 'next24' (24 giờ tới).
+ */
 export function candidateStarts(series, { scope = 'today', fromHour = 5, toHour = 22, hours = 1 }) {
   const { times, nowIndex } = series;
   const today = datePart(times[nowIndex]);
   const days =
     scope === 'today' ? [today] : scope === 'tomorrow' ? [addDays(today, 1)] : [today, addDays(today, 1), addDays(today, 2)];
+  const inScope = scope === 'next24' ? (i) => i < nowIndex + 24 : (i) => days.includes(datePart(times[i]));
   const out = [];
   for (let i = nowIndex; i < times.length; i++) {
-    const d = datePart(times[i]);
-    if (!days.includes(d)) continue;
+    if (!inScope(i)) continue;
     const h = hourOf(times[i]);
     if (h < fromHour || h + hours > toHour) continue;
     if (i + Math.ceil(hours) > times.length) continue;
@@ -103,6 +106,41 @@ export function dailyMean(series, dateStr) {
     .filter((v) => v != null);
   if (!vals.length) return null;
   return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+// --- Trong nhà: giờ mở cửa sổ ---
+
+// Ngưỡng trùng với mốc VN_AQI: ≤ 25 µg/m³ là mức Tốt, ≤ 50 µg/m³ là mức Trung bình.
+export const VENT_STATUSES = [
+  { id: 'open', max: 25, label: 'Mở thoải mái', icon: '🪟' },
+  { id: 'brief', max: 50, label: 'Chỉ mở ngắn 10–15 phút', icon: '⏱️' },
+  { id: 'closed', max: Infinity, label: 'Đóng kín, bật máy lọc', icon: '🚪' },
+];
+
+export function ventStatus(pm25) {
+  return VENT_STATUSES.find((s) => pm25 <= s.max);
+}
+
+/**
+ * Kế hoạch mở cửa sổ cho `hours` giờ tới: trạng thái từng giờ, các đoạn liên tiếp cùng trạng thái,
+ * và 2 khung thông gió tốt nhất trong giờ sinh hoạt (06:00–23:00).
+ */
+export function ventilationPlan(series, hours = 24) {
+  const end = Math.min(series.times.length, series.nowIndex + hours);
+  const slots = [];
+  for (let i = series.nowIndex; i < end; i++) {
+    const pm25 = series.pm25[i];
+    if (pm25 == null) continue;
+    slots.push({ index: i, time: series.times[i], pm25, status: ventStatus(pm25) });
+  }
+  const runs = [];
+  for (const s of slots) {
+    const last = runs[runs.length - 1];
+    if (last && last.status.id === s.status.id && last.end === s.index) last.end = s.index + 1;
+    else runs.push({ status: s.status, start: s.index, end: s.index + 1 });
+  }
+  const { best } = findBestWindows(series, { scope: 'next24', fromHour: 6, toHour: 23, hours: 1 }, 2);
+  return { slots, runs, best };
 }
 
 // --- Chế độ Trường học / Doanh nghiệp ---
