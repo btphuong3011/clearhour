@@ -22,7 +22,10 @@ export function haversineKm(lat1, lon1, lat2, lon2) {
   return 6371 * 2 * Math.asin(Math.sqrt(a));
 }
 
-/** Trạm gần nhất trong bán kính `maxKm`, có số đo không cũ hơn `maxAgeHours`. */
+/**
+ * Trạm gần nhất trong bán kính `maxKm`, có số đo không cũ hơn `maxAgeHours`.
+ * Ưu tiên trạm quan trắc chuẩn; chỉ dùng cảm biến giá rẻ khi quanh đó không có trạm chuẩn.
+ */
 export function nearestStation(stations, lat, lon, { maxKm = 30, maxAgeHours = 3, now = Date.now() } = {}) {
   let best = null;
   for (const s of stations) {
@@ -30,7 +33,8 @@ export function nearestStation(stations, lat, lon, { maxKm = 30, maxAgeHours = 3
     if (now - Date.parse(s.time) > maxAgeHours * 3600e3) continue;
     const km = haversineKm(lat, lon, s.lat, s.lon);
     if (km > maxKm) continue;
-    if (!best || km < best.km) best = { ...s, km };
+    const better = !best || (s.isMonitor && !best.isMonitor) || (s.isMonitor === best.isMonitor && km < best.km);
+    if (better) best = { ...s, km };
   }
   return best;
 }

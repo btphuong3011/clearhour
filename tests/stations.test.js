@@ -23,13 +23,23 @@ test('chọn trạm gần nhất còn số đo mới, bỏ trạm quá xa hoặc
   assert.equal(nearestStation(stations, 10.77, 106.7, { now: NOW }), null);
 });
 
+test('ưu tiên trạm quan trắc chuẩn hơn cảm biến giá rẻ ở gần hơn', () => {
+  const time = '2026-10-31T08:00:00Z';
+  const sensor = { name: 'Cảm biến', lat: 21.03, lon: 105.855, pm25: 30, time, isMonitor: false };
+  const monitor = { name: 'Trạm chuẩn', lat: 21.005, lon: 105.843, pm25: 12, time, isMonitor: true };
+  assert.equal(nearestStation([sensor, monitor], 21.0285, 105.8542, { now: NOW }).name, 'Trạm chuẩn');
+  assert.equal(nearestStation([monitor, sensor], 21.0285, 105.8542, { now: NOW }).name, 'Trạm chuẩn');
+  assert.equal(nearestStation([sensor], 21.0285, 105.8542, { now: NOW }).name, 'Cảm biến');
+});
+
 test('gom số đo PM2.5 mới nhất từ phản hồi OpenAQ v3', async () => {
   const responses = {
     locations: {
       results: [
         {
           id: 1,
-          name: 'Hanoi US Embassy',
+          name: 'Hanoi US Embassy ',
+          country: { code: 'VN' },
           coordinates: { latitude: 21.02, longitude: 105.84 },
           isMonitor: true,
           provider: { name: 'AirNow' },
@@ -53,6 +63,30 @@ test('gom số đo PM2.5 mới nhất từ phản hồi OpenAQ v3', async () => 
           sensors: [{ id: 31, parameter: { id: 1, name: 'pm10' } }],
           datetimeLast: { utc: '2026-10-31T08:00:00Z' },
         },
+        {
+          id: 4,
+          name: 'Pakse (Lào)',
+          country: { code: 'LA' },
+          coordinates: { latitude: 15.12, longitude: 105.8 },
+          sensors: [{ id: 41, parameter: { id: 2, name: 'pm25' } }],
+          datetimeLast: { utc: '2026-10-31T08:00:00Z' },
+        },
+        {
+          id: 5,
+          name: 'Cảm biến báo 0',
+          country: { code: 'VN' },
+          coordinates: { latitude: 10.78, longitude: 106.67 },
+          sensors: [{ id: 51, parameter: { id: 2, name: 'pm25' } }],
+          datetimeLast: { utc: '2026-10-31T08:00:00Z' },
+        },
+        {
+          id: 6,
+          name: 'PM2.5 ngừng từ tháng 5',
+          country: { code: 'VN' },
+          coordinates: { latitude: 16.05, longitude: 108.2 },
+          sensors: [{ id: 61, parameter: { id: 2, name: 'pm25' } }],
+          datetimeLast: { utc: '2026-10-31T08:00:00Z' },
+        },
       ],
     },
     1: {
@@ -61,6 +95,8 @@ test('gom số đo PM2.5 mới nhất từ phản hồi OpenAQ v3', async () => 
         { sensorsId: 11, value: 23.46, datetime: { utc: '2026-10-31T08:00:00Z' } },
       ],
     },
+    5: { results: [{ sensorsId: 51, value: 0, datetime: { utc: '2026-10-31T08:00:00Z' } }] },
+    6: { results: [{ sensorsId: 61, value: 14, datetime: { utc: '2026-05-21T16:00:00Z' } }] },
   };
   const calls = [];
   const getJson = async (url) => {
@@ -82,6 +118,9 @@ test('gom số đo PM2.5 mới nhất từ phản hồi OpenAQ v3', async () => 
       provider: 'AirNow',
     },
   ]);
-  // Trạm cũ không bị gọi API; trạm chỉ đo PM10 bị bỏ qua
-  assert.equal(calls.filter((u) => u.includes('/latest')).length, 1);
+  // Trạm cũ, trạm nước ngoài và trạm chỉ đo PM10 không bị gọi API; số đo 0 và số đo cũ bị loại
+  assert.deepEqual(
+    calls.filter((u) => u.includes('/latest')).map((u) => u.match(/locations\/(\d+)/)[1]),
+    ['1', '5', '6'],
+  );
 });

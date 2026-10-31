@@ -11,9 +11,12 @@ const VIETNAM_BBOX = '102.1,8.4,109.6,23.4'; // minLon,minLat,maxLon,maxLat
 const MAX_STATIONS = 200;
 
 export async function collectStations(getJson, { now = Date.now(), maxAgeHours = 6, pauseMs = 0 } = {}) {
+  const isFresh = (utc) => utc && now - Date.parse(utc) <= maxAgeHours * 3600e3;
   const locs = await getJson(`${API}/locations?bbox=${VIETNAM_BBOX}&parameters_id=${PM25}&limit=1000`);
+  // Khung bbox chồng lên Lào, Campuchia, Thái Lan, Trung Quốc nên lọc lại theo mã quốc gia
   const fresh = locs.results
-    .filter((l) => l.datetimeLast?.utc && now - Date.parse(l.datetimeLast.utc) <= maxAgeHours * 3600e3)
+    .filter((l) => !l.country?.code || l.country.code === 'VN')
+    .filter((l) => isFresh(l.datetimeLast?.utc))
     .slice(0, MAX_STATIONS);
 
   const stations = [];
@@ -23,10 +26,11 @@ export async function collectStations(getJson, { now = Date.now(), maxAgeHours =
     try {
       const latest = await getJson(`${API}/locations/${loc.id}/latest`);
       const m = latest.results.find((r) => r.sensorsId === sensor.id);
-      if (m && m.value != null && m.value >= 0 && m.value < 1000) {
+      // Bỏ số đo cũ (trạm còn chạy nhưng cảm biến PM2.5 đã ngừng) và giá trị 0 hay quá lớn (thường do lỗi cảm biến)
+      if (m && isFresh(m.datetime?.utc) && m.value > 0 && m.value < 1000) {
         stations.push({
           id: loc.id,
-          name: loc.name,
+          name: loc.name.trim(),
           lat: loc.coordinates.latitude,
           lon: loc.coordinates.longitude,
           pm25: Math.round(m.value * 10) / 10,
