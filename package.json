@@ -1,0 +1,12 @@
+{
+  "name": "clearhour",
+  "version": "0.1.0",
+  "description": "ClearHour – chọn khung giờ ra ngoài ít bụi mịn PM2.5 nhất, dựa trên dự báo chất lượng không khí",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "python -m http.server 5173",
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
