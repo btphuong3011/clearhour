@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { collectStations } from '../scripts/fetch-stations.mjs';
-import { haversineKm, nearestStation } from '../src/stations.js';
+import { ageText, haversineKm, nearestStation, toLocalTime } from '../src/stations.js';
 
 const NOW = Date.parse('2026-10-31T08:30:00Z');
 
@@ -13,7 +13,7 @@ test('khoảng cách Hà Nội – TP.HCM khoảng 1.140 km', () => {
 test('chọn trạm gần nhất còn số đo mới, bỏ trạm quá xa hoặc số đo cũ', () => {
   const stations = [
     { name: 'Xa', lat: 21.6, lon: 105.85, pm25: 30, time: '2026-10-31T08:00:00Z' },
-    { name: 'Cũ', lat: 21.03, lon: 105.85, pm25: 40, time: '2026-10-31T01:00:00Z' },
+    { name: 'Cũ', lat: 21.03, lon: 105.85, pm25: 40, time: '2026-10-30T12:00:00Z' },
     { name: 'Gần', lat: 21.05, lon: 105.82, pm25: 22.4, time: '2026-10-31T08:00:00Z' },
     { name: 'Gần nhưng xa hơn', lat: 21.1, lon: 105.8, pm25: 25, time: '2026-10-31T08:00:00Z' },
   ];
@@ -21,6 +21,20 @@ test('chọn trạm gần nhất còn số đo mới, bỏ trạm quá xa hoặc
   assert.equal(st.name, 'Gần');
   assert.ok(st.km < 5);
   assert.equal(nearestStation(stations, 10.77, 106.7, { now: NOW }), null);
+});
+
+test('vẫn dùng số đo cũ vài giờ do lịch chạy GitHub Actions không đều', () => {
+  const st = { name: 'ĐHBK', lat: 21.005, lon: 105.842, pm25: 12, time: '2026-10-31T01:50:00Z', isMonitor: true };
+  assert.equal(nearestStation([st], 21.0285, 105.8542, { now: NOW }).name, 'ĐHBK'); // cũ 6 giờ 40 phút
+  assert.equal(nearestStation([st], 21.0285, 105.8542, { now: NOW + 6 * 3600e3 }), null); // cũ hơn 12 giờ
+});
+
+test('giờ đo theo giờ địa phương và độ cũ dạng chữ', () => {
+  assert.equal(toLocalTime('2026-10-31T08:50:00Z', 25200), '2026-10-31T15:50');
+  assert.equal(toLocalTime('2026-10-31T20:00:00Z', 25200), '2026-11-01T03:00');
+  assert.equal(ageText(2 * 60000), 'vừa cập nhật');
+  assert.equal(ageText(25 * 60000), '25 phút trước');
+  assert.equal(ageText(6.6 * 3600e3), '7 giờ trước');
 });
 
 test('ưu tiên trạm quan trắc chuẩn hơn cảm biến giá rẻ ở gần hơn', () => {

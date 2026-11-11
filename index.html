@@ -53,6 +53,32 @@
     </header>
 
     <main id="app" class="wrap">
+      <section class="intro" aria-labelledby="intro-title">
+        <div>
+          <p class="intro__kicker">Bụi mịn thay đổi theo từng giờ</p>
+          <h1 id="intro-title">Ra ngoài đúng giờ, hít ít bụi hơn</h1>
+          <p class="intro__lead">
+            ClearHour đọc dự báo chất lượng không khí theo giờ ở thành phố của bạn và gợi ý lúc nào nên chạy bộ, đưa con đi
+            chơi, xếp ca làm việc ngoài trời hay mở cửa sổ. Có ngày bụi mịn lúc sáng sớm cao gấp 3 lần buổi chiều, nên chỉ cần
+            dời giờ là đã giảm đáng kể lượng bụi hít vào.
+          </p>
+        </div>
+        <ol class="intro__steps">
+          <li>
+            <span class="intro__num" aria-hidden="true">1</span>
+            <span><strong>Chọn thành phố</strong> và bạn là ai (trẻ em, người cao tuổi…)</span>
+          </li>
+          <li>
+            <span class="intro__num" aria-hidden="true">2</span>
+            <span><strong>Chọn việc định làm</strong> và trong bao lâu</span>
+          </li>
+          <li>
+            <span class="intro__num" aria-hidden="true">3</span>
+            <span><strong>Nhận 3 khung giờ ít bụi nhất</strong>, thêm thẳng vào lịch của bạn</span>
+          </li>
+        </ol>
+      </section>
+
       <section class="locbar" aria-label="Chọn địa điểm">
         <label class="field">
           <span class="field__label">Thành phố</span>
@@ -256,7 +282,7 @@
             <ul class="bullets">
               <li>
                 Đây là <strong>dữ liệu dự báo từ mô hình</strong> (ô lưới khoảng 45 km), không thay thế số liệu trạm quan trắc chính thức.
-                Số đo của trạm gần nhất (OpenAQ, cập nhật mỗi giờ) được hiện kèm để bạn đối chiếu.
+                Số đo của trạm gần nhất (OpenAQ, cập nhật vài giờ một lần) được hiện kèm để bạn đối chiếu.
               </li>
               <li>Nồng độ sát mặt đường đông xe thường cao hơn mức nền của mô hình.</li>
               <li>Lượng bụi hít vào chỉ là ước tính theo mức thông khí trung bình của người trưởng thành.</li>

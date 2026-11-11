@@ -169,6 +169,87 @@ p {
   background: var(--surface-2);
 }
 
+/* ---------- Giới thiệu đầu trang ---------- */
+.intro {
+  display: grid;
+  gap: 18px 32px;
+  align-items: center;
+  margin-top: 20px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%);
+}
+@media (min-width: 900px) {
+  .intro {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}
+.intro__kicker {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.intro h1 {
+  margin: 0 0 10px;
+  font-size: clamp(24px, 3.2vw, 32px);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.intro__lead {
+  max-width: 62ch;
+  color: var(--ink-2);
+}
+.intro__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.intro__steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.intro__steps strong {
+  color: var(--ink);
+}
+@media (max-width: 640px) {
+  .intro {
+    padding: 18px 16px;
+  }
+  .intro__lead {
+    font-size: 14px;
+  }
+  .intro__steps li {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+.intro__num {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 /* ---------- Location bar ---------- */
 .locbar {
   display: flex;

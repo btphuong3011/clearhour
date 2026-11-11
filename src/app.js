@@ -17,7 +17,7 @@ import {
   ventilationPlan,
   windowStats,
 } from './planner.js';
-import { fetchStations, nearestStation } from './stations.js';
+import { ageText, fetchStations, nearestStation, toLocalTime } from './stations.js';
 import { addDays, datePart, dayLabel, formatClock, hourOf, parseClock, shortDate, weekday } from './time.js';
 
 const $ = (id) => document.getElementById(id);
@@ -254,17 +254,23 @@ function renderStation() {
   const p = place();
   const st = nearestStation(state.stations, p.lat, p.lon);
   if (!st) {
-    $('station-meta').textContent = 'Không có số đo mới trong bán kính 30 km';
+    $('station-meta').textContent = 'Không có trạm nào đo trong 12 giờ qua, bán kính 30 km';
     $('station-val').replaceChildren('–');
     return;
   }
-  const localTime = new Date(Date.parse(st.time) + s.utcOffsetSeconds * 1000).toISOString().slice(11, 16);
-  $('station-meta').textContent = `${st.name} · cách ${num(st.km)} km · ${localTime}${st.isMonitor ? '' : ' · cảm biến giá rẻ'}`;
+  // Số đo có thể cũ vài giờ, nên so với dự báo của mô hình tại đúng giờ đo chứ không phải giờ hiện tại.
+  const local = toLocalTime(st.time, s.utcOffsetSeconds);
+  const modelIndex = s.times.indexOf(`${local.slice(0, 13)}:00`);
+  const model = s.pm25[modelIndex >= 0 ? modelIndex : s.nowIndex];
+  const when = datePart(local) === todayStr() ? local.slice(11, 16) : `${local.slice(11, 16)} ${shortDate(datePart(local))}`;
+  $('station-meta').textContent =
+    `${st.name} · cách ${num(st.km)} km · đo lúc ${when} (${ageText(Date.now() - Date.parse(st.time))})` +
+    (st.isMonitor ? '' : ' · cảm biến giá rẻ');
   $('station-val').replaceChildren(
     num(st.pm25),
     ' ',
     el('small', {}, 'µg/m³'),
-    el('small', { class: 'sub' }, `mô hình dự báo: ${num(s.pm25[s.nowIndex])}`),
+    el('small', { class: 'sub' }, `mô hình lúc đó: ${num(model)}`),
   );
 }
 
