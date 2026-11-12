@@ -1,4 +1,4 @@
-import { aqiFromConcentration, levelForAqi, WHO_PM25_24H } from './aqi.js';
+import { aqiFromConcentration, levelForAqi } from './aqi.js';
 import { num } from './format.js';
 import { datePart, hourOf, shortDate, weekday } from './time.js';
 
@@ -33,9 +33,12 @@ function barPath(x, y, w, h) {
  * Vẽ biểu đồ cột PM2.5 theo giờ.
  * @param {HTMLElement} host  khung cuộn chứa SVG
  * @param {HTMLElement} tip   tooltip dùng chung
- * @param {{series, start, end, windows}} opts windows: [{start, hours, rank}]
+ * @param {{series, start, end, windows, planned, dayText}} opts
+ *   windows: [{start, hours, rank}] các khung đề xuất; planned: {start, hours} giờ người dùng định đi;
+ *   dayText: (dateStr) => nhãn ngày dưới trục.
  */
-export function renderChart(host, tip, { series, start, end, windows = [] }) {
+export function renderChart(host, tip, { series, start, end, windows = [], planned = null, dayText }) {
+  const dayLabelOf = dayText ?? ((d) => `${weekday(d)} ${shortDate(d)}`);
   const n = end - start;
   const width = Math.max(host.clientWidth, n * MIN_SLOT + MARGIN.left + MARGIN.right);
   const plotW = width - MARGIN.left - MARGIN.right;
@@ -71,7 +74,7 @@ export function renderChart(host, tip, { series, start, end, windows = [] }) {
       }
       const d = datePart(t);
       if (h === 0 || h < 18) {
-        root.append(svg('text', { x: x(i) + 4, y: HEIGHT - 6, class: 't-day' }, `${weekday(d)} ${shortDate(d)}`));
+        root.append(svg('text', { x: x(i) + 4, y: HEIGHT - 6, class: 't-day' }, dayLabelOf(d)));
       }
     }
     if (h % hourStep === 0) {
@@ -85,7 +88,8 @@ export function renderChart(host, tip, { series, start, end, windows = [] }) {
     const wx = x(w.start);
     const ww = Math.min(Math.ceil(w.hours), end - w.start) * slot;
     root.append(svg('rect', { x: wx, y: MARGIN.top, width: ww, height: plotH, fill: 'var(--accent-wash)', rx: 4 }));
-    const cx = wx + ww / 2;
+    // Trùng với giờ định đi thì dịch sang phải, nhường chỗ cho ký hiệu hình thoi
+    const cx = wx + ww / 2 + (planned?.start === w.start ? 10 : 0);
     root.append(svg('circle', { cx, cy: MARGIN.top - 12, r: 8, fill: 'var(--accent)' }));
     root.append(svg('text', { x: cx, y: MARGIN.top - 8.5, 'text-anchor': 'middle', class: 't-rank' }, w.rank));
   }
@@ -111,17 +115,22 @@ export function renderChart(host, tip, { series, start, end, windows = [] }) {
     root.append(bar);
   }
 
-  // Đường tham chiếu WHO
-  if (WHO_PM25_24H < top) {
-    const wy = y(WHO_PM25_24H);
-    root.append(svg('line', { x1: MARGIN.left, x2: width - MARGIN.right, y1: wy, y2: wy, stroke: 'var(--ink-2)', 'stroke-width': 1, opacity: 0.6 }));
+  // Giờ người dùng định đi: khung viền + hình thoi, khác hẳn ký hiệu tròn đánh số của khung đề xuất
+  if (planned && planned.start >= start && planned.start < end) {
+    const px = x(planned.start);
+    const pw = Math.min(Math.ceil(planned.hours), end - planned.start) * slot;
+    root.append(svg('rect', { x: px + 1, y: MARGIN.top, width: pw - 2, height: plotH, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1.5, rx: 4 }));
+    const cx = px + pw / 2 - (windows.some((w) => w.start === planned.start) ? 10 : 0);
+    const cy = MARGIN.top - 12;
+    root.append(svg('path', { d: `M${cx},${cy - 8}L${cx + 8},${cy}L${cx},${cy + 8}L${cx - 8},${cy}Z`, fill: 'var(--ink)' }));
   }
 
   // Mốc "bây giờ"
   if (series.nowIndex >= start && series.nowIndex < end) {
     const nx = x(series.nowIndex);
     root.append(svg('line', { x1: nx, x2: nx, y1: MARGIN.top - 2, y2: MARGIN.top + plotH, stroke: 'var(--accent)', 'stroke-width': 2 }));
-    root.append(svg('text', { x: nx - 5, y: MARGIN.top + 10, 'text-anchor': 'end', class: 't-now' }, 'Bây giờ'));
+    const roomLeft = nx - MARGIN.left > 56;
+    root.append(svg('text', { x: nx + (roomLeft ? -5 : 5), y: MARGIN.top + 10, 'text-anchor': roomLeft ? 'end' : 'start', class: 't-now' }, 'Bây giờ'));
   }
 
   // Lớp bắt chuột: mỗi giờ là một vùng cao bằng cả biểu đồ

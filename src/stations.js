@@ -40,6 +40,19 @@ export function nearestStation(stations, lat, lon, { maxKm = 30, maxAgeHours = 1
   return best;
 }
 
+/**
+ * Số đo trạm và dự báo mô hình (cùng giờ) có khớp nhau không.
+ * Coi là khớp khi chênh không quá 10 µg/m³ hoặc không quá 1,5 lần. Ngưỡng này là giả định.
+ * Trả về 'agree' | 'station-higher' | 'station-lower'; một mẫu đơn lẻ không cho biết nguồn nào đúng hơn.
+ */
+export function compareWithModel(stationPm25, modelPm25) {
+  if (stationPm25 == null || modelPm25 == null) return null;
+  const diff = stationPm25 - modelPm25;
+  const ratio = Math.max(stationPm25, modelPm25) / Math.max(Math.min(stationPm25, modelPm25), 1);
+  if (Math.abs(diff) <= 10 || ratio <= 1.5) return 'agree';
+  return diff > 0 ? 'station-higher' : 'station-lower';
+}
+
 /** Thời điểm đo (UTC) -> giờ địa phương "YYYY-MM-DDTHH:MM". */
 export function toLocalTime(utc, utcOffsetSeconds = 0) {
   return new Date(Date.parse(utc) + utcOffsetSeconds * 1000).toISOString().slice(0, 16);

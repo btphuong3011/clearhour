@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { collectStations } from '../scripts/fetch-stations.mjs';
-import { ageText, haversineKm, nearestStation, toLocalTime } from '../src/stations.js';
+import { ageText, compareWithModel, haversineKm, nearestStation, toLocalTime } from '../src/stations.js';
 
 const NOW = Date.parse('2026-10-31T08:30:00Z');
 
@@ -137,4 +137,12 @@ test('gom số đo PM2.5 mới nhất từ phản hồi OpenAQ v3', async () => 
     calls.filter((u) => u.includes('/latest')).map((u) => u.match(/locations\/(\d+)/)[1]),
     ['1', '5', '6'],
   );
+});
+
+test('đối chiếu số đo trạm với mô hình', () => {
+  assert.equal(compareWithModel(26.5, 36.3), 'agree'); // chênh dưới 10 µg/m³
+  assert.equal(compareWithModel(60, 45), 'agree'); // chênh dưới 1,5 lần
+  assert.equal(compareWithModel(66.6, 17.3), 'station-higher');
+  assert.equal(compareWithModel(1.5, 64.7), 'station-lower');
+  assert.equal(compareWithModel(null, 20), null);
 });

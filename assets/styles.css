@@ -11,6 +11,8 @@
   --accent-ink: #ffffff;
   --accent-wash: rgba(15, 118, 110, 0.11);
   --accent-soft: #d6efec;
+  --sky: #eff7ff;
+  --sky-line: #cfe3f7;
   --ok: #157a3c;
   --caution: #a35a00;
   --stop: #b4232a;
@@ -33,6 +35,8 @@
     --accent-ink: #032420;
     --accent-wash: rgba(44, 201, 180, 0.13);
     --accent-soft: #123a35;
+  --sky: #101f2c;
+  --sky-line: #1f3447;
     --ok: #5ad48a;
     --caution: #f0a447;
     --stop: #ff7a7f;
@@ -54,6 +58,8 @@
   --accent-ink: #032420;
   --accent-wash: rgba(44, 201, 180, 0.13);
   --accent-soft: #123a35;
+  --sky: #101f2c;
+  --sky-line: #1f3447;
   --ok: #5ad48a;
   --caution: #f0a447;
   --stop: #ff7a7f;
@@ -171,83 +177,18 @@ p {
 
 /* ---------- Giới thiệu đầu trang ---------- */
 .intro {
-  display: grid;
-  gap: 18px 32px;
-  align-items: center;
-  margin-top: 20px;
-  padding: 22px 24px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%);
-}
-@media (min-width: 900px) {
-  .intro {
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  }
-}
-.intro__kicker {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  margin-bottom: 6px;
+  padding-top: 20px;
 }
 .intro h1 {
-  margin: 0 0 10px;
-  font-size: clamp(24px, 3.2vw, 32px);
+  margin: 0 0 6px;
+  font-size: clamp(22px, 3vw, 30px);
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 .intro__lead {
-  max-width: 62ch;
+  max-width: 70ch;
   color: var(--ink-2);
-}
-.intro__steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-.intro__steps li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  font-size: 14px;
-  color: var(--ink-2);
-}
-.intro__steps strong {
-  color: var(--ink);
-}
-@media (max-width: 640px) {
-  .intro {
-    padding: 18px 16px;
-  }
-  .intro__lead {
-    font-size: 14px;
-  }
-  .intro__steps li {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-}
-.intro__num {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 13px;
-  font-weight: 700;
 }
 
 /* ---------- Location bar ---------- */
@@ -256,7 +197,7 @@ p {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
-  padding: 20px 0 16px;
+  padding: 14px 0 14px;
 }
 .locbar__meta {
   margin-left: auto;
@@ -367,7 +308,7 @@ a:focus-visible {
 }
 @media (min-width: 900px) {
   .grid {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     align-items: start;
   }
 }
@@ -495,9 +436,6 @@ main.is-loading .card {
   font-weight: 500;
   color: var(--muted);
 }
-.profile {
-  margin-top: 18px;
-}
 .advice {
   margin-top: 14px;
   padding: 12px 14px;
@@ -576,59 +514,22 @@ main.is-loading .card {
   align-items: flex-end;
 }
 .results {
-  margin-top: 20px;
+  margin-top: 12px;
   display: grid;
   gap: 10px;
 }
-.window {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 4px 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-.window--best {
-  border-color: var(--accent);
-  background: var(--accent-wash);
-}
-.window__rank {
-  grid-row: span 2;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 14px;
-  background: var(--surface-2);
-  color: var(--ink-2);
-}
-.window--best .window__rank {
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-.window__time {
-  font-weight: 700;
-  font-size: 16px;
-}
-.window__detail {
+.planner__summary {
+  margin-top: 14px;
   font-size: 13px;
   color: var(--ink-2);
 }
-.window__level {
-  grid-row: span 2;
-  justify-self: end;
+#dieu-chinh {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
-.compare {
-  font-size: 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--surface-2);
-}
-.compare strong {
-  color: var(--accent);
+#dieu-chinh h3 {
+  margin: 0;
 }
 .empty {
   color: var(--muted);
@@ -639,19 +540,212 @@ main.is-loading .card {
   font-size: 13px;
   color: var(--caution);
 }
-.window__actions {
-  grid-column: 2 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
 .btn--xs {
   min-height: 30px;
   padding: 4px 10px;
   font-size: 12px;
   border-radius: 8px;
   text-decoration: none;
+}
+
+.free {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.free__range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.free select {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.verdict-card {
+  padding: 16px;
+  border: 1px solid var(--sky-line);
+  border-radius: 14px;
+  background: var(--sky);
+}
+.verdict-card__title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.verdict-card__sub {
+  margin-top: 4px;
+  color: var(--ink-2);
+}
+.verdict-card__sub strong {
+  color: var(--ink);
+  font-size: 17px;
+}
+.duel {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 14px;
+}
+.duel__side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.duel__side--to {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.duel__tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.duel__time {
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.duel__day {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.duel__pm {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.duel__arrow {
+  align-self: center;
+  font-size: 20px;
+  color: var(--muted);
+}
+@media (max-width: 520px) {
+  /* Màn hình hẹp: xếp dọc để giờ không bị ngắt dòng */
+  .intro__lead {
+    display: none;
+  }
+  .duel {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .duel__arrow {
+    transform: rotate(90deg);
+  }
+  .verdict-card__title {
+    font-size: 18px;
+  }
+}
+
+.options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.option--chosen {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.option__mark,
+.legend i.mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  font-style: normal;
+}
+.option__mark--plan,
+.legend i.mark--plan {
+  width: 14px;
+  height: 14px;
+  margin: 0 4px;
+  border-radius: 2px;
+  background: var(--ink);
+  transform: rotate(45deg);
+}
+.option .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.option__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.option__time {
+  font-weight: 600;
+}
+.option__detail {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.chosen {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.chosen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.chosen__text {
+  margin-top: 10px;
+  background: var(--surface);
+}
+
+.status {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.status strong {
+  color: var(--ink);
+}
+.status--warn {
+  border-color: color-mix(in srgb, var(--caution) 45%, var(--line));
+  background: color-mix(in srgb, var(--caution) 9%, var(--surface));
+}
+.status--ok {
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
+}
+
+.more {
+  margin-top: 14px;
+}
+.more .stats {
+  margin-top: 10px;
 }
 
 /* ---------- Trong nhà ---------- */
@@ -757,6 +851,9 @@ main.is-loading .card {
   height: 10px;
   border-radius: 3px;
   display: inline-block;
+}
+.chart-card > .legend {
+  margin-bottom: 12px;
 }
 .legend i.line {
   width: 14px;

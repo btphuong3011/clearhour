@@ -46,7 +46,7 @@
         <nav class="topnav" aria-label="Mục chính">
           <a href="#ca-nhan">Cá nhân</a>
           <a href="#trong-nha">Trong nhà</a>
-          <a href="#to-chuc">Trường học &amp; DN</a>
+          <a href="#to-chuc">Lịch cố định</a>
           <a href="#du-an">Về dự án</a>
         </nav>
       </div>
@@ -54,29 +54,10 @@
 
     <main id="app" class="wrap">
       <section class="intro" aria-labelledby="intro-title">
-        <div>
-          <p class="intro__kicker">Bụi mịn thay đổi theo từng giờ</p>
-          <h1 id="intro-title">Ra ngoài đúng giờ, hít ít bụi hơn</h1>
-          <p class="intro__lead">
-            ClearHour đọc dự báo chất lượng không khí theo giờ ở thành phố của bạn và gợi ý lúc nào nên chạy bộ, đưa con đi
-            chơi, xếp ca làm việc ngoài trời hay mở cửa sổ. Có ngày bụi mịn lúc sáng sớm cao gấp 3 lần buổi chiều, nên chỉ cần
-            dời giờ là đã giảm đáng kể lượng bụi hít vào.
-          </p>
-        </div>
-        <ol class="intro__steps">
-          <li>
-            <span class="intro__num" aria-hidden="true">1</span>
-            <span><strong>Chọn thành phố</strong> và bạn là ai (trẻ em, người cao tuổi…)</span>
-          </li>
-          <li>
-            <span class="intro__num" aria-hidden="true">2</span>
-            <span><strong>Chọn việc định làm</strong> và trong bao lâu</span>
-          </li>
-          <li>
-            <span class="intro__num" aria-hidden="true">3</span>
-            <span><strong>Nhận 3 khung giờ ít bụi nhất</strong>, thêm thẳng vào lịch của bạn</span>
-          </li>
-        </ol>
+        <h1 id="intro-title">Ra ngoài giờ nào thì ít bụi nhất?</h1>
+        <p class="intro__lead">
+          Bụi mịn thay đổi theo từng giờ. Chọn giờ bạn định đi, ClearHour so với những lúc bạn rảnh và cho biết nên giữ lịch hay dời.
+        </p>
       </section>
 
       <section class="locbar" aria-label="Chọn địa điểm">
@@ -93,50 +74,25 @@
       <div id="banner" class="banner" role="status" hidden></div>
 
       <section id="ca-nhan" class="grid">
-        <article class="card now" aria-labelledby="now-title">
-          <header class="card__head">
-            <h2 id="now-title" class="eyebrow">Ngay lúc này</h2>
-            <span id="now-place" class="muted"></span>
-          </header>
-          <div class="now__body">
-            <div class="now__hero">
-              <div class="now__aqi" id="now-aqi">–</div>
-              <div class="now__aqi-meta">
-                <span class="pill" id="now-level">Đang tải…</span>
-                <span class="muted small">VN_AQI giờ (Nowcast)</span>
-              </div>
-            </div>
-            <dl class="stats">
-              <div>
-                <dt>Bụi mịn PM2.5</dt>
-                <dd><span id="now-pm25">–</span> <small>µg/m³</small></dd>
-              </div>
-              <div>
-                <dt>So với ngưỡng WHO 24 giờ</dt>
-                <dd id="now-who">–</dd>
-              </div>
-              <div>
-                <dt>Hít thở cả ngày hôm nay tương đương</dt>
-                <dd><span id="now-cig">–</span> <small>điếu thuốc lá</small></dd>
-              </div>
-              <div id="station-row" hidden>
-                <dt>Trạm đo gần nhất <small class="sub" id="station-meta"></small></dt>
-                <dd id="station-val">–</dd>
-              </div>
-            </dl>
-          </div>
-          <div class="profile">
-            <p class="field__label" id="profile-label">Bạn là</p>
-            <div class="chips" id="profiles" role="radiogroup" aria-labelledby="profile-label"></div>
-          </div>
-          <p class="advice" id="now-advice"></p>
-        </article>
-
         <article class="card planner" aria-labelledby="plan-title">
           <header class="card__head">
-            <h2 id="plan-title" class="eyebrow">Lên lịch ra ngoài</h2>
+            <h2 id="plan-title" class="eyebrow">So sánh giờ ra ngoài</h2>
           </header>
-          <div class="planner__controls">
+          <div class="planner__row">
+            <div>
+              <p class="field__label" id="scope-label">Ngày nào</p>
+              <div class="seg" id="scopes" role="radiogroup" aria-labelledby="scope-label"></div>
+            </div>
+            <label class="field field--grow">
+              <span class="field__label">Giờ bạn định đi (hoặc thường đi)</span>
+              <select id="planned"></select>
+            </label>
+          </div>
+          <p class="planner__summary" id="plan-summary"></p>
+          <div id="results" class="results" aria-live="polite"></div>
+
+          <div class="planner__controls" id="dieu-chinh">
+            <h3 class="eyebrow">Điều chỉnh</h3>
             <div>
               <p class="field__label" id="activity-label">Bạn định</p>
               <div class="chips" id="activities" role="radiogroup" aria-labelledby="activity-label"></div>
@@ -146,28 +102,81 @@
                 <p class="field__label" id="duration-label">Trong bao lâu</p>
                 <div class="seg" id="durations" role="radiogroup" aria-labelledby="duration-label"></div>
               </div>
-              <div>
-                <p class="field__label" id="scope-label">Vào lúc</p>
-                <div class="seg" id="scopes" role="radiogroup" aria-labelledby="scope-label"></div>
-              </div>
+              <label class="field">
+                <span class="field__label">Bạn là</span>
+                <select id="profile"></select>
+              </label>
             </div>
-            <div class="planner__row">
-              <label class="field">
-                <span class="field__label">Từ</span>
-                <select id="from-hour"></select>
-              </label>
-              <label class="field">
-                <span class="field__label">Đến</span>
-                <select id="to-hour"></select>
-              </label>
-              <label class="field field--grow">
-                <span class="field__label">So với giờ bạn định đi</span>
-                <select id="planned"></select>
-              </label>
+            <div>
+              <p class="field__label" id="free-label">Những lúc bạn rảnh trong ngày</p>
+              <div class="free" id="free-ranges" role="group" aria-labelledby="free-label"></div>
             </div>
           </div>
-          <div id="results" class="results" aria-live="polite"></div>
         </article>
+
+        <article class="card now" aria-labelledby="now-title">
+          <header class="card__head">
+            <h2 id="now-title" class="eyebrow">Không khí lúc này</h2>
+            <span id="now-place" class="muted"></span>
+          </header>
+          <div class="now__body">
+            <div class="now__hero">
+              <div class="now__aqi" id="now-aqi">–</div>
+              <div class="now__aqi-meta">
+                <span class="pill" id="now-level">Đang tải…</span>
+                <span class="muted small">VN_AQI theo mô hình dự báo, tính từ 12 giờ gần nhất (Nowcast)</span>
+              </div>
+            </div>
+            <dl class="stats">
+              <div>
+                <dt>PM2.5 giờ này <small class="sub">dự báo của mô hình</small></dt>
+                <dd><span id="now-pm25">–</span> <small>µg/m³</small></dd>
+              </div>
+              <div id="station-row" hidden>
+                <dt>Trạm đo gần nhất <small class="sub" id="station-meta"></small></dt>
+                <dd id="station-val">–</dd>
+              </div>
+            </dl>
+          </div>
+          <p class="advice" id="now-advice"></p>
+          <details class="more">
+            <summary>So sánh cả ngày hôm nay</summary>
+            <dl class="stats">
+              <div>
+                <dt>PM2.5 trung bình cả ngày <small class="sub">dự báo, 24 giờ</small></dt>
+                <dd><span id="now-daymean">–</span> <small>µg/m³</small></dd>
+              </div>
+              <div>
+                <dt>So với mức WHO khuyến nghị <small class="sub">trung bình 24 giờ không quá 15 µg/m³</small></dt>
+                <dd id="now-who">–</dd>
+              </div>
+              <div>
+                <dt>Quy đổi tham khảo <small class="sub">theo Berkeley Earth, hít thở cả ngày</small></dt>
+                <dd>≈ <span id="now-cig">–</span> <small>điếu thuốc lá</small></dd>
+              </div>
+            </dl>
+          </details>
+        </article>
+      </section>
+
+      <section class="card chart-card" aria-labelledby="chart-title">
+        <header class="card__head card__head--wrap">
+          <div>
+            <h2 id="chart-title" class="title">Dự báo bụi mịn PM2.5 theo giờ</h2>
+            <p class="muted small" id="chart-sub"></p>
+          </div>
+          <div class="seg" id="chart-range" role="radiogroup" aria-label="Khoảng thời gian của biểu đồ"></div>
+        </header>
+        <ul class="legend" id="legend" aria-label="Chú giải biểu đồ"></ul>
+        <div class="chart" id="chart">
+          <div class="chart__scroll" id="chart-scroll"></div>
+          <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+        </div>
+        <details class="table-view">
+          <summary>Xem toàn bộ dự báo dạng bảng</summary>
+          <div class="table-wrap" id="table"></div>
+        </details>
+        <p class="footnote" id="grid-note"></p>
       </section>
 
       <section id="trong-nha" class="card vent" aria-labelledby="vent-title">
@@ -190,32 +199,14 @@
         <p class="muted small vent__tip" id="vent-tip"></p>
       </section>
 
-      <section class="card chart-card" aria-labelledby="chart-title">
-        <header class="card__head card__head--wrap">
-          <div>
-            <h2 id="chart-title" class="title">Dự báo bụi mịn PM2.5 theo giờ</h2>
-            <p class="muted small" id="chart-sub">Cột tô màu theo mức VN_AQI; vùng nền xanh là các khung giờ được gợi ý.</p>
-          </div>
-          <ul class="legend" id="legend" aria-label="Chú giải mức chất lượng không khí"></ul>
-        </header>
-        <div class="chart" id="chart">
-          <div class="chart__scroll" id="chart-scroll"></div>
-          <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
-        </div>
-        <details class="table-view">
-          <summary>Xem dạng bảng</summary>
-          <div class="table-wrap" id="table"></div>
-        </details>
-        <p class="footnote" id="grid-note"></p>
-      </section>
-
       <section id="to-chuc" class="card org" aria-labelledby="org-title">
         <header class="card__head card__head--wrap">
           <div>
-            <h2 id="org-title" class="title">Chế độ Trường học &amp; Doanh nghiệp</h2>
+            <h2 id="org-title" class="title">Lịch cố định: trường học &amp; doanh nghiệp</h2>
             <p class="muted small">
-              Nhập các khung hoạt động ngoài trời cố định, ClearHour đánh giá từng khung trong 3 ngày tới theo giờ có bụi cao nhất
-              và soạn sẵn thông báo để gửi phụ huynh hoặc nhân viên.
+              Thời khóa biểu hay ca làm thường không dời được theo dự báo. Điều quyết định được là tổ chức bình thường, giảm
+              cường độ hay chuyển vào trong nhà. Nhập các khung hoạt động ngoài trời, ClearHour đánh giá từng khung trong 3 ngày
+              tới theo giờ có bụi cao nhất và soạn sẵn thông báo cho phụ huynh hoặc nhân viên.
             </p>
           </div>
           <div class="seg" id="org-types" role="radiogroup" aria-label="Loại tổ chức"></div>
@@ -272,8 +263,11 @@
               <li>Lấy dự báo PM2.5 và PM10 theo giờ cho 3–4 ngày tới từ mô hình CAMS (qua Open-Meteo).</li>
               <li>Quy đổi sang chỉ số <strong>VN_AQI</strong> và khuyến nghị theo nhóm người theo QĐ 1459/QĐ-TCMT.</li>
               <li>
-                Trượt cửa sổ thời gian theo hoạt động và thời lượng bạn chọn để tìm khung giờ có nồng độ trung bình thấp nhất,
-                rồi ước tính lượng bụi hít vào = nồng độ × mức thông khí × thời gian.
+                Trong những lúc bạn rảnh, tìm các khung giờ có PM2.5 trung bình thấp nhất rồi so với giờ bạn định đi. Chỉ khuyên
+                dời lịch khi chênh từ 10% và từ 3 µg/m³ trở lên; thấp hơn thế thì khuyên giữ lịch cũ.
+              </li>
+              <li>
+                Đối chiếu với số đo của trạm gần nhất và nói rõ khi hai nguồn lệch nhau nhiều, thay vì âm thầm chọn một nguồn.
               </li>
             </ol>
           </article>
@@ -285,7 +279,8 @@
                 Số đo của trạm gần nhất (OpenAQ, cập nhật vài giờ một lần) được hiện kèm để bạn đối chiếu.
               </li>
               <li>Nồng độ sát mặt đường đông xe thường cao hơn mức nền của mô hình.</li>
-              <li>Lượng bụi hít vào chỉ là ước tính theo mức thông khí trung bình của người trưởng thành.</li>
+              <li>Các ngưỡng "đáng để đổi lịch" và "trạm khớp mô hình" là giả định ban đầu, chưa được kiểm chứng với người dùng và dữ liệu dài ngày.</li>
+              <li>Lượng bụi hít vào chỉ ước tính cho người trưởng thành; các hồ sơ khác chỉ thay đổi lời khuyên.</li>
               <li>Không phải lời khuyên y tế. Người có bệnh nền hãy làm theo hướng dẫn của bác sĩ.</li>
             </ul>
           </article>

@@ -52,10 +52,12 @@ export function windowStats(pm25, start, hours, ventilation = 1) {
 }
 
 /**
- * Các giờ bắt đầu hợp lệ: từ giờ hiện tại trở đi, nằm trọn trong khung giờ cho phép của cùng một ngày.
+ * Các giờ bắt đầu hợp lệ: từ giờ hiện tại trở đi, nằm trọn trong một khoảng rảnh của cùng một ngày.
  * scope: 'today' | 'tomorrow' | 'all' (3 ngày) | 'next24' (24 giờ tới).
+ * ranges: các khoảng rảnh [{ from, to }] theo giờ trong ngày, có thể rời nhau (ví dụ 5–7 và 17–21).
  */
-export function candidateStarts(series, { scope = 'today', fromHour = 5, toHour = 22, hours = 1 }) {
+export function candidateStarts(series, { scope = 'today', fromHour = 5, toHour = 22, ranges, hours = 1 }) {
+  const free = ranges?.length ? ranges : [{ from: fromHour, to: toHour }];
   const { times, nowIndex } = series;
   const today = datePart(times[nowIndex]);
   const days =
@@ -65,7 +67,7 @@ export function candidateStarts(series, { scope = 'today', fromHour = 5, toHour 
   for (let i = nowIndex; i < times.length; i++) {
     if (!inScope(i)) continue;
     const h = hourOf(times[i]);
-    if (h < fromHour || h + hours > toHour) continue;
+    if (!free.some((r) => h >= r.from && h + hours <= r.to)) continue;
     if (i + Math.ceil(hours) > times.length) continue;
     out.push(i);
   }
@@ -92,6 +94,24 @@ export function findBestWindows(series, opts, count = 3) {
   }
   const worst = sorted[sorted.length - 1];
   return { best, worst, all };
+}
+
+// Hai khung chênh nhau dưới 10% hoặc dưới 3 µg/m³ thì coi như tương đương: mức chênh đó nhỏ hơn
+// sai số thường gặp của dự báo, không đáng để khuyên ai đổi lịch. Ngưỡng này là giả định, cần kiểm chứng thêm.
+export const SAME_REL = 0.1;
+export const SAME_ABS = 3;
+
+/**
+ * So một khung giờ với giờ người dùng định đi.
+ * relation: 'better' (ít bụi hơn rõ rệt) | 'worse' | 'same' (gần tương đương); pct: mức chênh theo %.
+ */
+export function compareWithPlan(planned, option) {
+  const diff = option.mean - planned.mean;
+  const pct = planned.mean > 0 ? Math.round((Math.abs(diff) / planned.mean) * 100) : 0;
+  if (option.start === planned.start || Math.abs(diff) < SAME_ABS || Math.abs(diff) < planned.mean * SAME_REL) {
+    return { relation: 'same', pct, diff };
+  }
+  return { relation: diff < 0 ? 'better' : 'worse', pct, diff };
 }
 
 /** Phần trăm giảm của `a` so với `b` (0–100). */
@@ -200,7 +220,8 @@ export function evaluateSlot(series, dateStr, slot, orgType = 'school') {
   });
   if (!vals.length) return null;
   const peak = Math.max(...vals);
+  const mean = vals.reduce((sum, v) => sum + v, 0) / vals.length;
   const aqi = aqiFromConcentration(peak, 'pm2_5');
   const level = levelForAqi(aqi);
-  return { peak, aqi, level, ...ORG_VERDICTS[orgType][level.id] };
+  return { peak, mean, aqi, level, ...ORG_VERDICTS[orgType][level.id] };
 }

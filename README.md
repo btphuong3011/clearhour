@@ -1,6 +1,6 @@
 # ClearHour – Chọn đúng giờ, bớt hít bụi
 
-**ClearHour** (tạm dịch: "giờ trong lành") là web app dùng dự báo bụi mịn PM2.5 theo giờ để gợi ý **khung giờ ra ngoài ít ô nhiễm nhất** cho từng người, từng hoạt động, và giúp trường học, doanh nghiệp điều chỉnh lịch hoạt động ngoài trời.
+**ClearHour** (tạm dịch: "giờ trong lành") là web app dùng dự báo bụi mịn PM2.5 theo giờ để trả lời một câu hỏi cụ thể: **giữa giờ bạn định đi và những lúc bạn rảnh, nên giữ lịch hay dời sang giờ nào**. App cũng giúp trường học, doanh nghiệp quyết định tổ chức hoạt động ngoài trời bình thường, giảm cường độ hay chuyển vào trong nhà.
 
 🔗 **Bản demo:** https://btphuong3011.github.io/clearhour/
 
@@ -25,30 +25,37 @@ Trong khi đó, bụi mịn **thay đổi rất mạnh trong ngày**. Ví dụ t
 
 | Tính năng | Mô tả |
 |---|---|
-| **Ngay lúc này** | Chỉ số VN_AQI giờ (Nowcast), PM2.5 hiện tại, so sánh với ngưỡng WHO, quy đổi "số điếu thuốc lá" hít phải trong ngày, khuyến nghị theo nhóm người (trẻ em, người cao tuổi, người có bệnh hô hấp – tim mạch, phụ nữ mang thai). Kèm **số đo thật của trạm gần nhất** (OpenAQ) để đối chiếu với dự báo. |
-| **Lên lịch ra ngoài** | Chọn hoạt động (chạy bộ, đạp xe, đi bộ, đi xe máy, làm việc ngoài trời), thời lượng và khoảng giờ. App tìm 3 khung giờ có PM2.5 trung bình thấp nhất, ước tính lượng bụi hít vào và so sánh với giờ bạn định đi ("dời sang 16:00 giảm 45% lượng bụi hít vào"). Mỗi khung có nút **thêm vào Google Lịch hoặc tải tệp .ics** (nhắc trước 15 phút) để gợi ý thành hành động. |
-| **Trong nhà: giờ mở cửa sổ** | Dải 24 giờ cho biết lúc nào nên mở cửa thông gió, lúc nào chỉ mở ngắn và lúc nào nên đóng kín, bật máy lọc. Hữu ích cả với người không ra đường. |
-| **Biểu đồ 72 giờ** | Cột PM2.5 theo giờ, tô màu theo mức VN_AQI, đánh dấu khung được gợi ý, đường ngưỡng WHO, có bảng số liệu cho người dùng trình đọc màn hình. |
-| **Chế độ Trường học & Doanh nghiệp** | Nhập các khung hoạt động cố định (giờ thể dục, ra chơi, ca giao hàng…). App đánh giá từng khung trong 3 ngày tới (tổ chức bình thường / rút ngắn / chuyển vào trong nhà) và **soạn sẵn thông báo** để gửi nhóm Zalo phụ huynh hoặc nhân viên. |
+| **So sánh giờ ra ngoài** | Chọn giờ bạn định đi (hoặc thường đi) và tối đa 3 khoảng rảnh rời nhau, ví dụ trước và sau giờ làm. App trả lời thẳng: "Nên dời sang 13:00–14:00, bụi mịn dự báo thấp hơn 51%" hoặc "Giữ lịch cũ" khi các lúc rảnh khác không tốt hơn đáng kể. Lúc rảnh nào nhiều bụi hơn giờ định đi thì không đề xuất. |
+| **Hành động sau quyết định** | Khung đã chọn đưa được vào Google Lịch, tải tệp .ics (nhắc trước 15 phút), hoặc sao chép thành tin nhắn rủ nhóm có ngày giờ cụ thể, mức bụi dự báo và link mở lại đúng lựa chọn. |
+| **Độ tin cậy của dữ liệu** | Một dòng ngay dưới gợi ý cho biết trạm đo gần nhất (OpenAQ) khớp hay lệch với mô hình, hoặc không có trạm để đối chiếu. Khi trạm đo còn mới và đang xấu hơn dự báo, lời khuyên sức khỏe theo trạm đo. |
+| **Không khí lúc này** | VN_AQI giờ (Nowcast), PM2.5 giờ này, số đo trạm gần nhất, khuyến nghị theo nhóm người (trẻ em, người cao tuổi, người có bệnh hô hấp – tim mạch, phụ nữ mang thai). Các phép so sánh theo ngày (ngưỡng WHO 24 giờ, quy đổi điếu thuốc) nằm riêng trong phần mở rộng để không lẫn với số liệu theo giờ. |
+| **Biểu đồ theo giờ** | Mặc định xem trọn ngày của khung đang chọn, có ký hiệu riêng cho "giờ bạn định đi" và các khung đề xuất; chuyển được sang 72 giờ và bảng số liệu. |
+| **Trong nhà: giờ mở cửa sổ** | Dải 24 giờ cho biết lúc nào nên mở cửa thông gió, lúc nào chỉ mở ngắn và lúc nào nên đóng kín, bật máy lọc. |
+| **Lịch cố định: trường học & doanh nghiệp** | Nhập các khung hoạt động ngoài trời (giờ thể dục, ra chơi, ca giao hàng…). App đánh giá từng khung trong 3 ngày tới theo mức đỉnh và trung bình, rồi **soạn sẵn thông báo** cho phụ huynh hoặc nhân viên. |
 
-Ngoài ra: 12 đô thị lớn, "Vị trí của tôi", giao diện sáng/tối, chạy tốt trên điện thoại, link chia sẻ giữ nguyên lựa chọn (`?city=hanoi&profile=child&activity=run`), và **tự chuyển sang dữ liệu mẫu** nếu API lỗi để bản demo luôn xem được.
+Ngoài ra: 12 đô thị lớn, "Vị trí của tôi", giao diện sáng/tối, chạy tốt trên điện thoại, link chia sẻ giữ nguyên lựa chọn kể cả khoảng rảnh và giờ định đi (`?city=hanoi&free=5-7,17-21&plan=1.7`), và **tự chuyển sang dữ liệu mẫu có ghi rõ ngày** nếu API lỗi.
+
+### Vì sao không "đổi tiết thể dục"?
+
+Thời khóa biểu của trường hay ca làm của doanh nghiệp thường không dời được theo dự báo, và khi đổi thì lý do chính là lịch của giáo viên, học sinh chứ không phải bụi mịn. Điều các đơn vị này thật sự quyết định được là **tổ chức bình thường, giảm cường độ hay chuyển vào trong nhà**, nên phần "Lịch cố định" chỉ đưa ra đúng ba mức đó. Việc chọn giữa các giờ khả thi dành cho người có lịch linh hoạt: cá nhân, nhóm chạy bộ, đội bóng, câu lạc bộ.
 
 ## Cách hoạt động
 
 1. **Dữ liệu:** lấy dự báo PM2.5 và PM10 theo giờ (1 ngày trước + 4 ngày tới) từ [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api), dựa trên mô hình CAMS của Copernicus.
 2. **Chỉ số VN_AQI:** nội suy tuyến tính theo bảng BPi của [QĐ 1459/QĐ-TCMT (2019)](https://cem.gov.vn/storage/news_file_attach/QD%201459%20TCMT%20ngay%2012.11.2019%20AQI.pdf). Giá trị "ngay lúc này" dùng **Nowcast** (trung bình có trọng số 12 giờ gần nhất, w = max(Cmin/Cmax, 0,5)) đúng như quy định. Bộ test kiểm chứng với ví dụ tính mẫu trong văn bản.
-3. **Tìm khung giờ:** trượt cửa sổ thời gian trên các giờ hợp lệ, xếp theo nồng độ trung bình tăng dần, chọn 3 khung cách nhau ít nhất 2 giờ để có những lựa chọn thật sự khác nhau.
-4. **Lượng bụi hít vào** ≈ nồng độ (µg/m³) × mức thông khí (m³/giờ) × thời gian. Mức thông khí theo cường độ hoạt động lấy từ US EPA *Exposure Factors Handbook* (2011): nhẹ ~0,7, vừa ~1,6, mạnh ~3,0 m³/giờ.
+3. **Tìm và so sánh khung giờ:** trượt cửa sổ thời gian trên các khoảng rảnh, xếp theo PM2.5 trung bình tăng dần, lấy tối đa 3 khung cách nhau ít nhất 2 giờ. Mỗi khung được so với giờ người dùng định đi: chênh dưới 10% hoặc dưới 3 µg/m³ thì coi là tương đương và khuyên giữ lịch cũ, vì mức chênh đó nhỏ hơn sai số thường gặp của dự báo.
+4. **Lượng bụi hít vào** ≈ nồng độ (µg/m³) × mức thông khí (m³/giờ) × thời gian, theo US EPA *Exposure Factors Handbook* (2011): nhẹ ~0,7, vừa ~1,6, mạnh ~3,0 m³/giờ. Chỉ hiện cho hồ sơ người trưởng thành vì hệ số là của người lớn.
 5. **Quy đổi điếu thuốc:** theo Berkeley Earth, hít thở không khí có PM2.5 trung bình 22 µg/m³ trong một ngày tương đương hút khoảng 1 điếu thuốc lá.
 6. **Khuyến nghị sức khỏe:** theo Bảng 5 của QĐ 1459 (người bình thường / nhóm nhạy cảm).
 7. **Giờ mở cửa sổ:** PM2.5 ≤ 25 µg/m³ (mức Tốt) thì mở thoải mái, ≤ 50 µg/m³ (Trung bình) thì chỉ mở ngắn, cao hơn thì đóng kín.
-8. **Số đo trạm:** GitHub Actions chạy [scripts/fetch-stations.mjs](scripts/fetch-stations.mjs) theo lịch mỗi giờ (thực tế GitHub chạy thưa hơn, vài giờ một lần), lấy số đo PM2.5 mới nhất của các trạm tại Việt Nam từ [OpenAQ](https://openaq.org/) rồi đưa vào bản deploy dưới dạng `data/stations.json`. App hiện số đo trong vòng 12 giờ, ghi rõ đo lúc nào và so với dự báo của mô hình tại đúng giờ đo. API key nằm trong GitHub Secrets nên không lộ ra trình duyệt, và cũng không tạo commit rác.
+8. **Số đo trạm:** GitHub Actions chạy [scripts/fetch-stations.mjs](scripts/fetch-stations.mjs) theo lịch mỗi giờ (thực tế GitHub chạy thưa hơn, vài giờ một lần), lấy số đo PM2.5 mới nhất của các trạm tại Việt Nam từ [OpenAQ](https://openaq.org/) rồi đưa vào bản deploy dưới dạng `data/stations.json`. App hiện số đo trong vòng 12 giờ, ghi rõ đo lúc nào và so với dự báo của mô hình tại đúng giờ đo; hai nguồn được coi là khớp khi chênh không quá 10 µg/m³ hoặc không quá 1,5 lần. API key nằm trong GitHub Secrets nên không lộ ra trình duyệt, và cũng không tạo commit rác.
 
 ## Giới hạn
 
 - Đây là **dữ liệu dự báo từ mô hình** với ô lưới khoảng 45 km, không chi tiết đến từng phường và không thay thế số liệu trạm quan trắc chính thức. Số đo trạm hiện mới dùng để đối chiếu, chưa dùng để hiệu chỉnh dự báo.
 - Nồng độ sát mặt đường đông xe thường cao hơn mức nền của mô hình.
 - Chỉ số theo từng giờ trong tương lai được quy đổi trực tiếp từ nồng độ dự báo, không dùng Nowcast.
+- Các ngưỡng "đáng để đổi lịch" (10%, 3 µg/m³) và "trạm khớp mô hình" là giả định ban đầu, chưa được kiểm chứng với người dùng và dữ liệu dài ngày.
 - Lượng bụi hít vào chỉ là ước tính. **Không phải lời khuyên y tế.**
 
 ## Hướng phát triển
@@ -122,7 +129,7 @@ tests/                      Unit test (node:test)
 
 ## English summary
 
-**ClearHour** turns hourly PM2.5 forecasts into a concrete answer: *when* is the cleanest time to go outside. It ranks time windows for a chosen activity and duration, estimates inhaled dose (concentration × ventilation rate × time), shows Vietnam's official VN_AQI (Decision 1459/QĐ-TCMT, including Nowcast) with health advice for sensitive groups, and offers a school/business mode that evaluates fixed outdoor schedules for the next 3 days and drafts a ready-to-send notice. Recommended windows can be added to Google Calendar or downloaded as .ics reminders; an indoor view shows when to open or close windows over the next 24 hours; and the nearest monitoring station's latest reading (OpenAQ, refreshed hourly by GitHub Actions) is shown next to the forecast. Static site, no build step, falls back to bundled sample data if the forecast API is unreachable. Built as a demo for UNDP Viet Nam's Youth Digital Citizen Challenge 2026.
+**ClearHour** turns hourly PM2.5 forecasts into a concrete decision: given the time you planned to go out and the hours you are actually free, should you keep your schedule or move it? It only recommends a switch when the forecast difference is meaningful (at least 10% and 3 µg/m³), states how well the nearest monitoring station agrees with the model, shows Vietnam's official VN_AQI (Decision 1459/QĐ-TCMT, including Nowcast) with health advice for sensitive groups, and offers a school/business mode that evaluates fixed outdoor schedules for the next 3 days and drafts a ready-to-send notice. Recommended windows can be added to Google Calendar or downloaded as .ics reminders; an indoor view shows when to open or close windows over the next 24 hours; and the nearest monitoring station's latest reading (OpenAQ, refreshed hourly by GitHub Actions) is shown next to the forecast. Static site, no build step, falls back to bundled sample data if the forecast API is unreachable. Built as a demo for UNDP Viet Nam's Youth Digital Citizen Challenge 2026.
 
 ## Giấy phép
 

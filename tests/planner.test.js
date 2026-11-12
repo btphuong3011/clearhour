@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { normalize } from '../src/api.js';
 import {
   candidateStarts,
+  compareWithPlan,
   dailyMean,
   evaluateSlot,
   findBestWindows,
@@ -103,4 +104,38 @@ test('kế hoạch mở cửa sổ 24 giờ: gom các giờ liên tiếp và ch�
     plan.best.map((w) => w.start),
     [11, 15],
   );
+});
+
+test('chỉ xét các khoảng rảnh rời nhau, ví dụ trước và sau giờ làm', () => {
+  const ranges = [
+    { from: 5, to: 7 },
+    { from: 17, to: 21 },
+  ];
+  const starts = candidateStarts(series, { scope: 'tomorrow', ranges, hours: 1 });
+  assert.deepEqual(
+    starts.map((i) => i - 24),
+    [5, 6, 17, 18, 19, 20],
+  );
+  // Khung 2 giờ phải nằm trọn trong một khoảng rảnh
+  assert.deepEqual(
+    candidateStarts(series, { scope: 'tomorrow', ranges, hours: 2 }).map((i) => i - 24),
+    [5, 17, 18, 19],
+  );
+  const { best } = findBestWindows(series, { scope: 'tomorrow', ranges, hours: 1 }, 3);
+  assert.equal(best[0].start, 24 + 17); // 22 µg/m³, thấp nhất trong các giờ rảnh
+});
+
+test('so với giờ định đi: chỉ khuyên đổi khi chênh lệch đủ lớn', () => {
+  const at = (mean, start) => ({ mean, start });
+  assert.deepEqual(compareWithPlan(at(40, 7), at(27, 16)), { relation: 'better', pct: 33, diff: -13 });
+  assert.equal(compareWithPlan(at(40, 7), at(55, 6)).relation, 'worse');
+  assert.equal(compareWithPlan(at(40, 7), at(37, 16)).relation, 'same'); // chênh 7,5% < 10%
+  assert.equal(compareWithPlan(at(12, 7), at(10, 16)).relation, 'same'); // chênh 2 µg/m³ < 3
+  assert.equal(compareWithPlan(at(40, 7), at(20, 7)).relation, 'same'); // cùng một khung
+});
+
+test('đánh giá khung cố định trả về cả mức đỉnh và trung bình', () => {
+  const shift = evaluateSlot(series, '2026-11-01', { from: '07:00', to: '11:00' }, 'business');
+  assert.equal(shift.peak, 40);
+  assert.equal(shift.mean, (40 + 28 + 19 + 16) / 4);
 });
