@@ -25,6 +25,7 @@ Trong khi đó, bụi mịn **thay đổi rất mạnh trong ngày**. Ví dụ t
 
 | Tính năng | Mô tả |
 |---|---|
+| **Bầu trời theo giờ** | Đầu trang là cảnh thành phố tự vẽ: màu trời đổi theo giờ trong ngày, lớp bụi mù đậm nhạt theo đúng PM2.5 dự báo, nhân vật nói một câu theo mức chất lượng không khí. Kéo thanh trượt (tô màu theo mức bụi từng giờ) để xem trời thay đổi cả ngày. |
 | **So sánh giờ ra ngoài** | Chọn giờ bạn định đi (hoặc thường đi) và tối đa 3 khoảng rảnh rời nhau, ví dụ trước và sau giờ làm. App trả lời thẳng: "Nên dời sang 13:00–14:00, bụi mịn dự báo thấp hơn 51%" hoặc "Giữ lịch cũ" khi các lúc rảnh khác không tốt hơn đáng kể. Lúc rảnh nào nhiều bụi hơn giờ định đi thì không đề xuất. |
 | **Hành động sau quyết định** | Khung đã chọn đưa được vào Google Lịch, tải tệp .ics (nhắc trước 15 phút), hoặc sao chép thành tin nhắn rủ nhóm có ngày giờ cụ thể, mức bụi dự báo và link mở lại đúng lựa chọn. |
 | **Độ tin cậy của dữ liệu** | Một dòng ngay dưới gợi ý cho biết trạm đo gần nhất (OpenAQ) khớp hay lệch với mô hình, hoặc không có trạm để đối chiếu. Khi trạm đo còn mới và đang xấu hơn dự báo, lời khuyên sức khỏe theo trạm đo. |
@@ -109,6 +110,7 @@ src/planner.js              Tìm khung giờ, liều hít vào, giờ mở cửa
 src/calendar.js             Xuất sự kiện lịch (.ics, Google Lịch)
 src/stations.js             Đọc số đo trạm, tìm trạm gần nhất
 src/chart.js                Biểu đồ SVG tự vẽ (không dùng thư viện)
+src/scene.js                Cảnh thành phố SVG: màu trời theo giờ, bụi mù theo PM2.5
 src/api.js                  Gọi Open-Meteo, dữ liệu mẫu dự phòng
 src/app.js                  Kết nối giao diện
 scripts/fetch-stations.mjs  Lấy số đo trạm từ OpenAQ (chạy trong GitHub Actions)

@@ -44,7 +44,7 @@
           </span>
         </a>
         <nav class="topnav" aria-label="Mục chính">
-          <a href="#ca-nhan">Cá nhân</a>
+          <a href="#ca-nhan">So sánh giờ</a>
           <a href="#trong-nha">Trong nhà</a>
           <a href="#to-chuc">Lịch cố định</a>
           <a href="#du-an">Về dự án</a>
@@ -52,31 +52,44 @@
       </div>
     </header>
 
+    <section class="hero" aria-labelledby="intro-title">
+      <div class="hero__stage">
+        <div class="hero__scene" id="hero-scene"></div>
+        <div class="wrap hero__overlay">
+          <div class="hero__bar">
+            <label class="hero__city">
+              <span class="sr-only">Thành phố</span>
+              <span aria-hidden="true">📍</span>
+              <select id="city"></select>
+            </label>
+            <button id="locate" class="btn btn--glass btn--sm" type="button">Vị trí của tôi</button>
+          </div>
+          <div class="hero__card">
+            <h1 id="intro-title">Ra ngoài giờ nào thì ít bụi nhất?</h1>
+            <p class="hero__lead">
+              Bầu trời này được vẽ theo đúng mức bụi mịn dự báo. Kéo thanh bên dưới để xem trời thay đổi thế nào trong ngày.
+            </p>
+            <p class="hero__meta" id="updated" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+      <div class="wrap hero__controls">
+        <p class="hero__caption" id="hero-caption" aria-live="polite"></p>
+        <div class="hero__slider">
+          <div class="hero__marks" id="hero-marks" aria-hidden="true"></div>
+          <input type="range" id="hero-hour" min="0" max="23" step="1" aria-label="Xem bầu trời theo giờ trong ngày" />
+          <div class="hero__ticks" aria-hidden="true"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>
+        </div>
+      </div>
+    </section>
+
     <main id="app" class="wrap">
-      <section class="intro" aria-labelledby="intro-title">
-        <h1 id="intro-title">Ra ngoài giờ nào thì ít bụi nhất?</h1>
-        <p class="intro__lead">
-          Bụi mịn thay đổi theo từng giờ. Chọn giờ bạn định đi, ClearHour so với những lúc bạn rảnh và cho biết nên giữ lịch hay dời.
-        </p>
-      </section>
-
-      <section class="locbar" aria-label="Chọn địa điểm">
-        <label class="field">
-          <span class="field__label">Thành phố</span>
-          <select id="city"></select>
-        </label>
-        <button id="locate" class="btn btn--ghost" type="button">
-          <span aria-hidden="true">📍</span> Vị trí của tôi
-        </button>
-        <p id="updated" class="locbar__meta" aria-live="polite"></p>
-      </section>
-
       <div id="banner" class="banner" role="status" hidden></div>
 
       <section id="ca-nhan" class="grid">
         <article class="card planner" aria-labelledby="plan-title">
           <header class="card__head">
-            <h2 id="plan-title" class="eyebrow">So sánh giờ ra ngoài</h2>
+            <h2 id="plan-title" class="card-title"><span class="sec-icon sec-icon--teal" aria-hidden="true">🗓️</span>So sánh giờ ra ngoài</h2>
           </header>
           <div class="planner__row">
             <div>
@@ -88,35 +101,35 @@
               <select id="planned"></select>
             </label>
           </div>
-          <p class="planner__summary" id="plan-summary"></p>
           <div id="results" class="results" aria-live="polite"></div>
-
-          <div class="planner__controls" id="dieu-chinh">
-            <h3 class="eyebrow">Điều chỉnh</h3>
-            <div>
-              <p class="field__label" id="activity-label">Bạn định</p>
-              <div class="chips" id="activities" role="radiogroup" aria-labelledby="activity-label"></div>
-            </div>
-            <div class="planner__row">
+          <details class="drawer" id="dieu-chinh">
+            <summary><span class="drawer__icon" aria-hidden="true">⚙️</span><span id="plan-summary"></span></summary>
+            <div class="planner__controls">
               <div>
-                <p class="field__label" id="duration-label">Trong bao lâu</p>
-                <div class="seg" id="durations" role="radiogroup" aria-labelledby="duration-label"></div>
+                <p class="field__label" id="activity-label">Bạn định</p>
+                <div class="chips" id="activities" role="radiogroup" aria-labelledby="activity-label"></div>
               </div>
-              <label class="field">
-                <span class="field__label">Bạn là</span>
-                <select id="profile"></select>
-              </label>
+              <div class="planner__row">
+                <div>
+                  <p class="field__label" id="duration-label">Trong bao lâu</p>
+                  <div class="seg" id="durations" role="radiogroup" aria-labelledby="duration-label"></div>
+                </div>
+                <label class="field">
+                  <span class="field__label">Bạn là</span>
+                  <select id="profile"></select>
+                </label>
+              </div>
+              <div>
+                <p class="field__label" id="free-label">Những lúc bạn rảnh trong ngày</p>
+                <div class="free" id="free-ranges" role="group" aria-labelledby="free-label"></div>
+              </div>
             </div>
-            <div>
-              <p class="field__label" id="free-label">Những lúc bạn rảnh trong ngày</p>
-              <div class="free" id="free-ranges" role="group" aria-labelledby="free-label"></div>
-            </div>
-          </div>
+          </details>
         </article>
 
         <article class="card now" aria-labelledby="now-title">
           <header class="card__head">
-            <h2 id="now-title" class="eyebrow">Không khí lúc này</h2>
+            <h2 id="now-title" class="card-title"><span class="sec-icon sec-icon--sky" aria-hidden="true">🌤️</span>Không khí lúc này</h2>
             <span id="now-place" class="muted"></span>
           </header>
           <div class="now__body">
@@ -162,7 +175,7 @@
       <section class="card chart-card" aria-labelledby="chart-title">
         <header class="card__head card__head--wrap">
           <div>
-            <h2 id="chart-title" class="title">Dự báo bụi mịn PM2.5 theo giờ</h2>
+            <h2 id="chart-title" class="title"><span class="sec-icon sec-icon--sky" aria-hidden="true">📊</span>Dự báo bụi mịn PM2.5 theo giờ</h2>
             <p class="muted small" id="chart-sub"></p>
           </div>
           <div class="seg" id="chart-range" role="radiogroup" aria-label="Khoảng thời gian của biểu đồ"></div>
@@ -182,7 +195,7 @@
       <section id="trong-nha" class="card vent" aria-labelledby="vent-title">
         <header class="card__head card__head--wrap">
           <div>
-            <h2 id="vent-title" class="title">Trong nhà: khi nào mở cửa sổ?</h2>
+            <h2 id="vent-title" class="title"><span class="sec-icon sec-icon--peach" aria-hidden="true">🪟</span>Trong nhà: khi nào mở cửa sổ?</h2>
             <p class="muted small">
               Không khí trong nhà cũng cần thay mới (hơi nấu ăn, độ ẩm, CO₂). Mở cửa vào giờ bụi thấp để thông gió mà không
               đưa thêm bụi mịn vào nhà.
@@ -202,7 +215,7 @@
       <section id="to-chuc" class="card org" aria-labelledby="org-title">
         <header class="card__head card__head--wrap">
           <div>
-            <h2 id="org-title" class="title">Lịch cố định: trường học &amp; doanh nghiệp</h2>
+            <h2 id="org-title" class="title"><span class="sec-icon sec-icon--lav" aria-hidden="true">🏫</span>Lịch cố định: trường học &amp; doanh nghiệp</h2>
             <p class="muted small">
               Thời khóa biểu hay ca làm thường không dời được theo dự báo. Điều quyết định được là tổ chức bình thường, giảm
               cường độ hay chuyển vào trong nhà. Nhập các khung hoạt động ngoài trời, ClearHour đánh giá từng khung trong 3 ngày
@@ -241,7 +254,7 @@
       </section>
 
       <section id="du-an" class="about" aria-labelledby="about-title">
-        <h2 id="about-title" class="title">Về dự án</h2>
+        <h2 id="about-title" class="title"><span class="sec-icon sec-icon--teal" aria-hidden="true">💡</span>Về dự án</h2>
         <div class="about__grid">
           <article class="card">
             <h3>Vấn đề</h3>

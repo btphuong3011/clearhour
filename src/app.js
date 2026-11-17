@@ -21,6 +21,7 @@ import {
   ventilationPlan,
   windowStats,
 } from './planner.js';
+import { MOOD, renderScene } from './scene.js';
 import { ageText, compareWithModel, fetchStations, nearestStation, toLocalTime } from './stations.js';
 import { addDays, datePart, dayLabel, formatClock, hourOf, parseClock, shortDate, weekday } from './time.js';
 
@@ -59,6 +60,8 @@ const CHART_RANGES = [
   { id: 'all', label: '72 giờ' },
 ];
 const STATUS_ICON = { ok: '✅', caution: '⚠️', stop: '⛔' };
+// Nhân vật trong cảnh minh họa, theo hoạt động đang chọn
+const FIGURE = { run: '🏃', cycle: '🚴', walk: '🚶', moto: '🛵', work: '👷' };
 const DEFAULT_FREE = '5-22';
 
 const params = new URLSearchParams(location.search);
@@ -95,6 +98,9 @@ const state = {
   planned: null, // chỉ số giờ bắt đầu của "giờ bạn định đi"
   selected: null, // khung người dùng bấm "Chọn"; null = theo đề xuất của app
   chartRange: 'day',
+  heroHour: null, // chỉ số giờ đang xem trên cảnh đầu trang
+  heroIndices: [],
+  optionsOpen: false,
   orgType: pick(params.get('org'), ORG_TYPES, 'school'),
   slots: store.get('slots', null) ?? {
     school: structuredClone(ORG_PRESETS.school.slots),
@@ -306,6 +312,7 @@ function renderAll() {
   renderMeta();
   renderNow();
   renderPlanner();
+  renderHero();
   renderChartSection();
   renderVentilation();
   renderOrg();
@@ -368,6 +375,7 @@ function renderNow() {
   const aqi = combinedAqi({ pm2_5: nowcast(back(s.pm25)), pm10: nowcast(back(s.pm10)) });
   const modelLevel = levelForAqi(aqi);
   $('now-aqi').textContent = int(aqi);
+  $('now-aqi').style.setProperty('--lvl', modelLevel?.display ?? 'var(--line)');
   const pill = $('now-level');
   pill.textContent = modelLevel?.label ?? '–';
   pill.style.background = modelLevel?.display ?? '';
@@ -519,19 +527,13 @@ function renderPlanner() {
   Object.assign(state, { best: suggestions, mine, chosen });
 
   const free = state.free.map((r) => `${formatClock(r.from)}–${formatClock(r.to)}`).join(', ');
-  $('plan-summary').replaceChildren(
-    `Đang tính cho: ${act.icon} ${act.short} · ${state.hours < 1 ? '30 phút' : `${state.hours} giờ`} · lúc rảnh ${free} · `,
-    el('a', { href: '#dieu-chinh' }, 'Điều chỉnh'),
-  );
+  $('plan-summary').textContent = `Tùy chỉnh: ${act.icon} ${act.short} · ${state.hours < 1 ? '30 phút' : `${state.hours} giờ`} · rảnh ${free}`;
 
   const out = [];
   if (!options.length) {
-    out.push(el('p', { class: 'empty' }, 'Không còn giờ nào phù hợp trong các khoảng rảnh đã chọn. Thử chọn ngày khác hoặc nới khoảng rảnh.'));
+    out.push(el('p', { class: 'empty' }, 'Không còn giờ nào phù hợp trong các khoảng rảnh đã chọn. Thử chọn ngày khác hoặc nới khoảng rảnh trong phần Tùy chỉnh.'));
   } else {
-    out.push(verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers: others.length > 0 }));
-    if (options.length > 1) out.push(optionList({ options, mine, suggestions, chosen }));
-    out.push(chosenBar(chosen, mine));
-
+    out.push(verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers: others.length > 0, chosen }));
     const level = levelForAqi(chosen.aqi);
     if (chosen.aqi > (profile.sensitive ? 100 : 150)) {
       out.push(el('p', { class: 'warn' }, `Khung đã chọn vẫn ở mức ${level.label}. ${level.advice[profile.sensitive ? 'sensitive' : 'normal']}`));
@@ -539,7 +541,25 @@ function renderPlanner() {
   }
 
   const status = dataStatus(stationInfo());
-  out.push(el('p', { class: `status status--${status.tone}` }, el('strong', {}, 'Độ tin cậy của dữ liệu: '), status.text));
+  out.push(
+    el(
+      'p',
+      { class: `status status--${status.tone}` },
+      el('span', { class: 'status__icon', 'aria-hidden': 'true' }, status.tone === 'ok' ? '✓' : status.tone === 'warn' ? '!' : 'i'),
+      el('span', {}, el('strong', {}, 'Độ tin cậy của dữ liệu: '), status.text),
+    ),
+  );
+
+  if (options.length > 1) {
+    out.push(
+      el(
+        'details',
+        { class: 'more', open: state.optionsOpen, ontoggle: (e) => (state.optionsOpen = e.target.open) },
+        el('summary', {}, `Xem tất cả lựa chọn (${options.length})`),
+        optionList({ options, mine, suggestions, chosen }),
+      ),
+    );
+  }
 
   const notes = [`Phần trăm tính trên PM2.5 trung bình dự báo của cả khung. Hai khung chênh dưới ${SAME_REL * 100}% hoặc dưới ${SAME_ABS} µg/m³ được coi là tương đương.`];
   if (chosen && profile.id === 'adult') {
@@ -547,70 +567,81 @@ function renderPlanner() {
   } else if (chosen) {
     notes.push(`Hồ sơ «${profile.short}» chỉ đổi lời khuyên và ngưỡng cảnh báo; số liệu bụi giữ nguyên. Không hiện ước tính µg hít vào vì hệ số thông khí là của người lớn.`);
   }
-  out.push(el('p', { class: 'muted small' }, notes.join(' ')));
+  out.push(el('details', { class: 'more' }, el('summary', {}, 'Cách tính'), el('p', { class: 'muted small' }, notes.join(' '))));
   $('results').replaceChildren(...out);
 }
 
-/** Một bên của phép so sánh: nhãn, giờ, ngày, PM2.5 trung bình dự báo, mức. */
-function sideBox(tag, w, extraClass = '') {
+/** Một bên của phép so sánh: cảnh trời minh họa đúng giờ đó, kèm giờ, ngày, PM2.5 trung bình dự báo và mức. */
+function sceneCard(tag, w, extraClass = '') {
   const { day, range } = windowLabel(w);
+  const level = levelForAqi(w.aqi);
+  const art = el('div', { class: 'scene-card__art' });
+  art.append(
+    renderScene({
+      width: 480,
+      height: 220,
+      hour: hourOf(state.series.times[w.start]),
+      pm25: w.mean,
+      figure: FIGURE[state.activity],
+      figureX: 0.5,
+      figureScale: 0.3,
+      seed: 23,
+      id: `m${w.start}`,
+      label: `Minh họa bầu trời ${day.toLowerCase()} ${range}, PM2.5 dự báo ${num(w.mean)} µg/m³, mức ${level.label}`,
+    }),
+  );
   return el(
-    'div',
-    { class: `duel__side ${extraClass}` },
-    el('span', { class: 'duel__tag' }, tag),
-    el('span', { class: 'duel__time' }, range),
-    el('span', { class: 'duel__day' }, day),
-    el('span', { class: 'duel__pm' }, `${num(w.mean)} µg/m³ `, levelPill(levelForAqi(w.aqi), 'pill--sm')),
+    'figure',
+    { class: `scene-card ${extraClass}` },
+    art,
+    el(
+      'figcaption',
+      {},
+      el('span', { class: 'scene-card__tag' }, tag),
+      el('span', { class: 'scene-card__time' }, range),
+      el('span', { class: 'scene-card__day' }, day),
+      el('span', { class: 'scene-card__pm' }, `${num(w.mean)} µg/m³ `, levelPill(level, 'pill--sm')),
+    ),
   );
 }
 
-function verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers }) {
+function verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers, chosen }) {
+  let title;
+  let sub;
+  let duel;
   if (mine && shouldSwitch) {
     const tl = windowLabel(top);
-    return el(
-      'div',
-      { class: 'verdict-card' },
-      el('p', { class: 'verdict-card__title' }, `Nên dời sang ${tl.day.toLowerCase()} ${tl.range}`),
-      el('p', { class: 'verdict-card__sub' }, 'Bụi mịn dự báo thấp hơn ', el('strong', {}, `${cmp.pct}%`), ' so với giờ bạn định đi.'),
-      el(
-        'div',
-        { class: 'duel' },
-        sideBox('Giờ bạn định đi', mine),
-        el('span', { class: 'duel__arrow', 'aria-hidden': 'true' }, '→'),
-        sideBox('Đề xuất', top, 'duel__side--to'),
-      ),
-    );
-  }
-  if (mine) {
+    title = `Nên dời sang ${tl.day.toLowerCase()} ${tl.range}`;
+    sub = ['Bụi mịn dự báo thấp hơn ', el('strong', {}, `${cmp.pct}%`), ' so với giờ bạn định đi.'];
+    duel = [sceneCard('Giờ bạn định đi', mine), el('span', { class: 'duel__arrow', 'aria-hidden': 'true' }, '→'), sceneCard('Đề xuất', top, 'scene-card--to')];
+  } else if (mine) {
     const ml = windowLabel(mine);
-    let sub = 'Không có lúc rảnh nào khác để so sánh.';
+    title = `Giữ lịch cũ: ${ml.day.toLowerCase()} ${ml.range}`;
+    sub = ['Không có lúc rảnh nào khác để so sánh.'];
     if (top) {
       const tl = windowLabel(top);
-      sub = `Lúc rảnh ít bụi nhất (${tl.day.toLowerCase()} ${tl.range}) chỉ chênh ${num(Math.abs(cmp.diff))} µg/m³, không đáng để đổi lịch.`;
+      sub = [`Lúc rảnh ít bụi nhất (${tl.day.toLowerCase()} ${tl.range}) chỉ chênh ${num(Math.abs(cmp.diff))} µg/m³, không đáng để đổi lịch.`];
     } else if (hasOthers) {
-      sub = 'Những lúc rảnh khác đều nhiều bụi hơn giờ này.';
+      sub = ['Những lúc rảnh khác đều nhiều bụi hơn giờ này.'];
     }
-    return el(
-      'div',
-      { class: 'verdict-card' },
-      el('p', { class: 'verdict-card__title' }, `Giữ lịch cũ: ${ml.day.toLowerCase()} ${ml.range}`),
-      el('p', { class: 'verdict-card__sub' }, sub),
-      el('div', { class: 'duel' }, sideBox('Giờ bạn định đi', mine, 'duel__side--to')),
-    );
+    duel = [sceneCard('Giờ bạn định đi', mine, 'scene-card--to')];
+  } else {
+    const tl = windowLabel(top);
+    const spread = worst && worst.start !== top.start ? reductionPct(top.mean, worst.mean) : 0;
+    title = `Ít bụi nhất trong lúc bạn rảnh: ${tl.day.toLowerCase()} ${tl.range}`;
+    sub = [
+      spread ? `Thấp hơn ${spread}% so với giờ nhiều bụi nhất trong lúc bạn rảnh (${windowLabel(worst).range}). ` : '',
+      'Chọn «Giờ bạn định đi» ở trên để biết đổi giờ giúp giảm bao nhiêu so với lịch của bạn.',
+    ];
+    duel = [sceneCard('Đề xuất', top, 'scene-card--to')];
   }
-  const tl = windowLabel(top);
-  const spread = worst && worst.start !== top.start ? reductionPct(top.mean, worst.mean) : 0;
   return el(
     'div',
     { class: 'verdict-card' },
-    el('p', { class: 'verdict-card__title' }, `Ít bụi nhất trong lúc bạn rảnh: ${tl.day.toLowerCase()} ${tl.range}`),
-    el(
-      'p',
-      { class: 'verdict-card__sub' },
-      spread ? `Thấp hơn ${spread}% so với giờ nhiều bụi nhất trong lúc bạn rảnh (${windowLabel(worst).range}). ` : '',
-      'Chọn «Giờ bạn định đi» ở trên để biết đổi giờ giúp giảm bao nhiêu so với lịch của bạn.',
-    ),
-    el('div', { class: 'duel' }, sideBox('Đề xuất', top, 'duel__side--to')),
+    el('p', { class: 'verdict-card__title' }, title),
+    el('p', { class: 'verdict-card__sub' }, ...sub),
+    el('div', { class: `duel${duel.length === 1 ? ' duel--single' : ''}` }, ...duel),
+    chosenBar(chosen, mine),
   );
 }
 
@@ -665,7 +696,7 @@ function optionList({ options, mine, suggestions, chosen }) {
 /** Hành động sau quyết định: đưa khung đã chọn vào lịch hoặc gửi cho nhóm. */
 function chosenBar(chosen, mine) {
   const { day, range } = windowLabel(chosen);
-  const head = el('p', { class: 'chosen__label' }, 'Khung đã chọn: ', el('strong', {}, `${day.toLowerCase()} ${range}`));
+  const head = el('p', { class: 'chosen__label' }, 'Lưu khung đã chọn: ', el('strong', {}, `${day.toLowerCase()} ${range}`));
   if (isSample()) {
     return el('div', { class: 'chosen' }, head, el('p', { class: 'muted small' }, 'Đây là lịch minh họa từ dữ liệu mẫu nên không xuất ra lịch hay tin nhắn.'));
   }
@@ -697,6 +728,75 @@ function chosenBar(chosen, mine) {
       status,
     ),
     preview,
+  );
+}
+
+// ---------- Cảnh đầu trang ----------
+
+function renderHero() {
+  const s = state.series;
+  const focus = state.chosen?.start ?? s.nowIndex;
+  const day = datePart(s.times[focus]);
+  const idx = s.times.map((t, i) => (datePart(t) === day && s.pm25[i] != null ? i : -1)).filter((i) => i >= 0);
+  state.heroIndices = idx;
+  state.heroHour = idx.includes(focus) ? focus : idx[0];
+
+  const slider = $('hero-hour');
+  slider.max = idx.length - 1;
+  slider.value = idx.indexOf(state.heroHour);
+  // Thanh trượt tô màu theo mức bụi của từng giờ, đọc được cả ngày chỉ với một cái liếc
+  const stops = idx.map((i, k) => {
+    const color = levelForPm25(s.pm25[i])?.display ?? '#cccccc';
+    return `${color} ${((k / idx.length) * 100).toFixed(2)}% ${(((k + 1) / idx.length) * 100).toFixed(2)}%`;
+  });
+  slider.style.setProperty('--track', `linear-gradient(to right, ${stops.join(', ')})`);
+
+  const mark = (i, cls, text, title) => {
+    const k = idx.indexOf(i);
+    if (k < 0) return null;
+    return el('span', { class: `hero__mark ${cls}`, style: { left: `${((k + 0.5) / idx.length) * 100}%` }, title }, text);
+  };
+  $('hero-marks').replaceChildren(
+    ...[
+      idx.includes(s.nowIndex) ? mark(s.nowIndex, 'hero__mark--now', '', 'Bây giờ') : null,
+      state.mine ? mark(state.mine.start, 'hero__mark--plan', '', 'Giờ bạn định đi') : null,
+      ...state.best.map((w, n) => mark(w.start, '', String(n + 1), `Khung đề xuất ${n + 1}`)),
+    ].filter(Boolean),
+  );
+  drawHeroScene();
+}
+
+function drawHeroScene() {
+  const s = state.series;
+  const i = state.heroHour;
+  const t = s.times[i];
+  const pm = s.pm25[i];
+  const level = levelForPm25(pm);
+  const day = dayName(datePart(t));
+  const host = $('hero-scene');
+  host.replaceChildren(
+    renderScene({
+      width: 1200,
+      height: 360,
+      hour: hourOf(t),
+      pm25: pm,
+      figure: FIGURE[state.activity],
+      bubble: level ? MOOD[level.id] : null,
+      figureX: host.clientWidth < 700 ? 0.5 : 0.68,
+      id: 'hero',
+      label: `Minh họa bầu trời ${placeName()} ${day.toLowerCase()} lúc ${t.slice(11, 16)}, PM2.5 dự báo ${num(pm)} µg/m³`,
+    }),
+  );
+  const tags = [];
+  if (i === s.nowIndex) tags.push('bây giờ');
+  if (state.mine?.start === i) tags.push('giờ bạn định đi');
+  const n = state.best.findIndex((w) => w.start === i);
+  if (n >= 0) tags.push(`đề xuất ${n + 1}`);
+  $('hero-caption').replaceChildren(
+    el('strong', {}, `${day} · ${t.slice(11, 16)}`),
+    ` — PM2.5 dự báo ${num(pm)} µg/m³ `,
+    level ? levelPill(level, 'pill--sm') : '',
+    tags.length ? el('span', { class: 'hero__tags' }, tags.join(' · ')) : '',
   );
 }
 
@@ -1022,10 +1122,19 @@ function initControls() {
   });
   $('copy-notice').addEventListener('click', copyNotice);
 
+  $('hero-hour').addEventListener('input', (e) => {
+    state.heroHour = state.heroIndices[Number(e.target.value)] ?? state.heroHour;
+    drawHeroScene();
+  });
+
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => state.series && renderChartSection(), 150);
+    resizeTimer = setTimeout(() => {
+      if (!state.series) return;
+      renderChartSection();
+      drawHeroScene();
+    }, 150);
   });
 
   renderLegend();
