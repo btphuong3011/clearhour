@@ -33,11 +33,11 @@ function barPath(x, y, w, h) {
  * Vẽ biểu đồ cột PM2.5 theo giờ.
  * @param {HTMLElement} host  khung cuộn chứa SVG
  * @param {HTMLElement} tip   tooltip dùng chung
- * @param {{series, start, end, windows, planned, dayText}} opts
+ * @param {{series, start, end, windows, planned, selected, dayText}} opts
  *   windows: [{start, hours, rank}] các khung đề xuất; planned: {start, hours} giờ người dùng định đi;
  *   dayText: (dateStr) => nhãn ngày dưới trục.
  */
-export function renderChart(host, tip, { series, start, end, windows = [], planned = null, dayText }) {
+export function renderChart(host, tip, { series, start, end, windows = [], planned = null, selected = null, dayText }) {
   const dayLabelOf = dayText ?? ((d) => `${weekday(d)} ${shortDate(d)}`);
   const n = end - start;
   const width = Math.max(host.clientWidth, n * MIN_SLOT + MARGIN.left + MARGIN.right);
@@ -87,10 +87,15 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     if (w.start < start || w.start >= end) continue;
     const wx = x(w.start);
     const ww = Math.min(Math.ceil(w.hours), end - w.start) * slot;
-    root.append(svg('rect', { x: wx, y: MARGIN.top, width: ww, height: plotH, fill: 'var(--accent-wash)', rx: 4 }));
+    root.append(svg('rect', {
+      x: wx, y: MARGIN.top, width: ww, height: plotH, fill: 'var(--accent-wash)', rx: 4,
+    }));
     // Trùng với giờ định đi thì dịch sang phải, nhường chỗ cho ký hiệu hình thoi
     const cx = wx + ww / 2 + (planned?.start === w.start ? 10 : 0);
-    root.append(svg('circle', { cx, cy: MARGIN.top - 12, r: 8, fill: 'var(--accent)' }));
+    root.append(svg('circle', {
+      cx, cy: MARGIN.top - 12, r: 8, fill: 'var(--accent)',
+      stroke: w.selected ? 'var(--ink)' : null, 'stroke-width': w.selected ? 2 : null,
+    }));
     root.append(svg('text', { x: cx, y: MARGIN.top - 8.5, 'text-anchor': 'middle', class: 't-rank' }, w.rank));
   }
 
@@ -123,6 +128,16 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     const cx = px + pw / 2 - (windows.some((w) => w.start === planned.start) ? 10 : 0);
     const cy = MARGIN.top - 12;
     root.append(svg('path', { d: `M${cx},${cy - 8}L${cx + 8},${cy}L${cx},${cy + 8}L${cx - 8},${cy}Z`, fill: 'var(--ink)' }));
+  }
+
+  if (selected && selected.start !== planned?.start && selected.start >= start && selected.start < end) {
+    const sx = x(selected.start);
+    const sw = Math.min(Math.ceil(selected.hours), end - selected.start) * slot;
+    root.append(svg('rect', {
+      x: sx + 1, y: MARGIN.top, width: sw - 2, height: plotH, fill: 'none',
+      stroke: 'var(--accent)', 'stroke-width': 2.5, rx: 4,
+      'aria-label': 'Khung đã chọn',
+    }));
   }
 
   // Mốc "bây giờ"
@@ -181,6 +196,7 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
   root.addEventListener('pointerleave', hide);
   root.append(hits);
 
+  hide();
   host.replaceChildren(root);
   host.onscroll = hide;
 }

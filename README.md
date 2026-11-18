@@ -25,10 +25,11 @@ Trong khi đó, bụi mịn **thay đổi rất mạnh trong ngày**. Ví dụ t
 
 | Tính năng | Mô tả |
 |---|---|
-| **Bầu trời theo giờ** | Đầu trang là cảnh thành phố tự vẽ: màu trời đổi theo giờ trong ngày, lớp bụi mù đậm nhạt theo đúng PM2.5 dự báo, nhân vật nói một câu theo mức chất lượng không khí. Kéo thanh trượt (tô màu theo mức bụi từng giờ) để xem trời thay đổi cả ngày. |
+| **Bầu trời theo giờ** | Cảnh minh họa Hồ Hoàn Kiếm đổi sắc theo giờ. Kéo thanh trượt để đọc PM2.5 dự báo theo từng giờ của thành phố đang xem, rồi đưa một khung sắp tới vào phần so sánh. |
+| **Tình huống Hà Nội** | Chạy thử bằng dữ liệu mẫu ngày 31/10/2026, với giờ định đi và thời gian rảnh điền sẵn. Demo chạy độc lập với Open-Meteo và ghi rõ nguồn dữ liệu. |
 | **Câu chuyện "Một buổi sáng của Minh"** | Nút "Xem câu chuyện 30 giây" mở 5 cảnh kể lại cách Minh dùng ClearHour cho buổi chạy 6 giờ sáng mai, bằng dự báo thật của thành phố đang chọn. Kết thúc đổi theo dữ liệu: có hôm nên dời giờ, có hôm cứ giữ giờ cũ. Mở thẳng bằng link có `#cau-chuyen`. |
 | **So sánh giờ ra ngoài** | Chọn giờ bạn định đi (hoặc thường đi) và tối đa 3 khoảng rảnh rời nhau, ví dụ trước và sau giờ làm. App trả lời thẳng: "Nên dời sang 13:00–14:00, bụi mịn dự báo thấp hơn 51%" hoặc "Giữ lịch cũ" khi các lúc rảnh khác không tốt hơn đáng kể. Lúc rảnh nào nhiều bụi hơn giờ định đi thì không đề xuất. |
-| **Hành động sau quyết định** | Khung đã chọn đưa được vào Google Lịch, tải tệp .ics (nhắc trước 15 phút), hoặc sao chép thành tin nhắn rủ nhóm có ngày giờ cụ thể, mức bụi dự báo và link mở lại đúng lựa chọn. |
+| **Hành động sau quyết định** | Khung đã chọn đưa được vào Google Lịch, tải tệp .ics (nhắc trước 15 phút), hoặc sao chép thành tin nhắn rủ nhóm có ngày giờ cụ thể, mức bụi dự báo và link lưu cả giờ định đi lẫn khung đã chọn. Link mở sau khi khung giờ kết thúc vẫn ghi rõ lịch gốc. |
 | **Độ tin cậy của dữ liệu** | Một dòng ngay dưới gợi ý cho biết trạm đo gần nhất (OpenAQ) khớp hay lệch với mô hình, hoặc không có trạm để đối chiếu. Khi trạm đo còn mới và đang xấu hơn dự báo, lời khuyên sức khỏe theo trạm đo. |
 | **Không khí lúc này** | VN_AQI giờ (Nowcast), PM2.5 giờ này, số đo trạm gần nhất, khuyến nghị theo nhóm người (trẻ em, người cao tuổi, người có bệnh hô hấp – tim mạch, phụ nữ mang thai). Các phép so sánh theo ngày (ngưỡng WHO 24 giờ, quy đổi điếu thuốc) nằm riêng trong phần mở rộng để không lẫn với số liệu theo giờ. |
 | **Biểu đồ theo giờ** | Mặc định xem trọn ngày của khung đang chọn, có ký hiệu riêng cho "giờ bạn định đi" và các khung đề xuất; chuyển được sang 72 giờ và bảng số liệu. |

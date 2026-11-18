@@ -182,7 +182,7 @@ export function openStory({ series, place, sample, figure = '🏃', onFinish }) 
     'p',
     { class: 'story__note' },
     sample
-      ? 'Câu chuyện đang dùng dữ liệu mẫu vì không tải được dự báo trực tiếp.'
+      ? 'Câu chuyện đang dùng dữ liệu mẫu của Hà Nội.'
       : `Câu chuyện dùng dự báo thật của ${place} cho ngày mai, nên mỗi ngày một khác.`,
   );
   const close = () => {
@@ -224,6 +224,18 @@ export function openStory({ series, place, sample, figure = '🏃', onFinish }) 
     if (e.key === 'Escape') close();
     else if (e.key === 'ArrowRight') go(k + 1);
     else if (e.key === 'ArrowLeft') go(k - 1);
+    else if (e.key === 'Tab') {
+      const buttons = [...dialog.querySelectorAll('button:not(:disabled)')];
+      const first = buttons[0];
+      const last = buttons.at(-1);
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   }
 
   document.body.append(dialog);
