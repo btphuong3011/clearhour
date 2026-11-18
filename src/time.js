@@ -40,3 +40,21 @@ export function formatClock(hours) {
   const m = Math.round((hours - h) * 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+
+/** Buổi trong ngày theo cách nói thường ngày. */
+export function dayPeriod(hour) {
+  const h = Math.floor(hour) % 24;
+  if (h === 0 || h >= 23) return 'đêm';
+  if (h <= 10) return 'sáng';
+  if (h <= 12) return 'trưa';
+  if (h <= 17) return 'chiều';
+  return 'tối';
+}
+
+/** Giờ dễ đọc cho mọi người: 17 -> "5:00 chiều", 7.5 -> "7:30 sáng", 0 hoặc 24 -> "12:00 đêm". */
+export function friendlyClock(hours) {
+  const h = Math.floor(hours) % 24;
+  const m = Math.round((hours - Math.floor(hours)) * 60);
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, '0')} ${dayPeriod(h)}`;
+}

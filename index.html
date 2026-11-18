@@ -66,9 +66,8 @@
           </div>
           <div class="hero__card">
             <h1 id="intro-title">Ra ngoài giờ nào thì ít bụi nhất?</h1>
-            <p class="hero__lead">
-              Bầu trời này được vẽ theo đúng mức bụi mịn dự báo. Kéo thanh bên dưới để xem trời thay đổi thế nào trong ngày.
-            </p>
+            <p class="hero__lead">Bầu trời này vẽ theo đúng mức bụi dự báo. Kéo thanh bên dưới để xem trời đổi thế nào trong ngày.</p>
+            <button id="story-open" class="btn btn--story" type="button" hidden>▶ Xem câu chuyện 30 giây</button>
             <p class="hero__meta" id="updated" aria-live="polite"></p>
           </div>
         </div>
@@ -78,7 +77,10 @@
         <div class="hero__slider">
           <div class="hero__marks" id="hero-marks" aria-hidden="true"></div>
           <input type="range" id="hero-hour" min="0" max="23" step="1" aria-label="Xem bầu trời theo giờ trong ngày" />
-          <div class="hero__ticks" aria-hidden="true"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>
+          <div class="hero__ticks" aria-hidden="true"><span>Nửa đêm</span><span>6h sáng</span><span>12h trưa</span><span>6h tối</span><span>11h đêm</span></div>
+          <p class="hero__legend" aria-hidden="true">
+            <span><i class="mark mark--plan"></i> giờ bạn định đi</span><span><i class="mark">1</i> giờ nên đi</span>
+          </p>
         </div>
       </div>
     </section>
@@ -130,16 +132,19 @@
         <article class="card now" aria-labelledby="now-title">
           <header class="card__head">
             <h2 id="now-title" class="card-title"><span class="sec-icon sec-icon--sky" aria-hidden="true">🌤️</span>Không khí lúc này</h2>
-            <span id="now-place" class="muted"></span>
+            <span id="now-place" class="muted small"></span>
           </header>
-          <div class="now__body">
-            <div class="now__hero">
-              <div class="now__aqi" id="now-aqi">–</div>
-              <div class="now__aqi-meta">
-                <span class="pill" id="now-level">Đang tải…</span>
-                <span class="muted small">VN_AQI theo mô hình dự báo, tính từ 12 giờ gần nhất (Nowcast)</span>
-              </div>
+          <div class="now__hero">
+            <div class="now__face" id="now-face" aria-hidden="true">🙂</div>
+            <div>
+              <p class="now__level" id="now-level">Đang tải…</p>
+              <p class="muted small">Chỉ số VN_AQI: <strong id="now-aqi">–</strong></p>
             </div>
+          </div>
+          <p class="advice" id="now-advice"></p>
+          <p class="now__station" id="now-station" hidden></p>
+          <details class="more">
+            <summary>Số liệu chi tiết</summary>
             <dl class="stats">
               <div>
                 <dt>PM2.5 giờ này <small class="sub">dự báo của mô hình</small></dt>
@@ -149,12 +154,6 @@
                 <dt>Trạm đo gần nhất <small class="sub" id="station-meta"></small></dt>
                 <dd id="station-val">–</dd>
               </div>
-            </dl>
-          </div>
-          <p class="advice" id="now-advice"></p>
-          <details class="more">
-            <summary>So sánh cả ngày hôm nay</summary>
-            <dl class="stats">
               <div>
                 <dt>PM2.5 trung bình cả ngày <small class="sub">dự báo, 24 giờ</small></dt>
                 <dd><span id="now-daymean">–</span> <small>µg/m³</small></dd>
@@ -168,28 +167,9 @@
                 <dd>≈ <span id="now-cig">–</span> <small>điếu thuốc lá</small></dd>
               </div>
             </dl>
+            <p class="muted small">Chỉ số VN_AQI tính theo QĐ 1459/QĐ-TCMT từ dự báo của 12 giờ gần nhất (Nowcast).</p>
           </details>
         </article>
-      </section>
-
-      <section class="card chart-card" aria-labelledby="chart-title">
-        <header class="card__head card__head--wrap">
-          <div>
-            <h2 id="chart-title" class="title"><span class="sec-icon sec-icon--sky" aria-hidden="true">📊</span>Dự báo bụi mịn PM2.5 theo giờ</h2>
-            <p class="muted small" id="chart-sub"></p>
-          </div>
-          <div class="seg" id="chart-range" role="radiogroup" aria-label="Khoảng thời gian của biểu đồ"></div>
-        </header>
-        <ul class="legend" id="legend" aria-label="Chú giải biểu đồ"></ul>
-        <div class="chart" id="chart">
-          <div class="chart__scroll" id="chart-scroll"></div>
-          <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
-        </div>
-        <details class="table-view">
-          <summary>Xem toàn bộ dự báo dạng bảng</summary>
-          <div class="table-wrap" id="table"></div>
-        </details>
-        <p class="footnote" id="grid-note"></p>
       </section>
 
       <section id="trong-nha" class="card vent" aria-labelledby="vent-title">
@@ -210,6 +190,32 @@
         <ul class="legend vent__legend" id="vent-legend" aria-label="Chú giải trạng thái cửa sổ"></ul>
         <ul class="vent__runs" id="vent-runs"></ul>
         <p class="muted small vent__tip" id="vent-tip"></p>
+      </section>
+
+      <section class="card chart-card" aria-labelledby="chart-title">
+        <details class="chart-fold" id="chart-fold">
+        <summary class="chart-fold__summary">
+          <span class="title"><span class="sec-icon sec-icon--sky" aria-hidden="true">📊</span>Biểu đồ bụi mịn theo giờ</span>
+          <span class="muted small">Dành cho ai muốn xem số liệu chi tiết</span>
+        </summary>
+        <header class="card__head card__head--wrap">
+          <div>
+            <h2 id="chart-title" class="sr-only">Biểu đồ bụi mịn PM2.5 theo giờ</h2>
+            <p class="muted small" id="chart-sub"></p>
+          </div>
+          <div class="seg" id="chart-range" role="radiogroup" aria-label="Khoảng thời gian của biểu đồ"></div>
+        </header>
+        <ul class="legend" id="legend" aria-label="Chú giải biểu đồ"></ul>
+        <div class="chart" id="chart">
+          <div class="chart__scroll" id="chart-scroll"></div>
+          <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+        </div>
+        <details class="table-view">
+          <summary>Xem toàn bộ dự báo dạng bảng</summary>
+          <div class="table-wrap" id="table"></div>
+        </details>
+        <p class="footnote" id="grid-note"></p>
+        </details>
       </section>
 
       <section id="to-chuc" class="card org" aria-labelledby="org-title">

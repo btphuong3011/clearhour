@@ -26,6 +26,7 @@ Trong khi đó, bụi mịn **thay đổi rất mạnh trong ngày**. Ví dụ t
 | Tính năng | Mô tả |
 |---|---|
 | **Bầu trời theo giờ** | Đầu trang là cảnh thành phố tự vẽ: màu trời đổi theo giờ trong ngày, lớp bụi mù đậm nhạt theo đúng PM2.5 dự báo, nhân vật nói một câu theo mức chất lượng không khí. Kéo thanh trượt (tô màu theo mức bụi từng giờ) để xem trời thay đổi cả ngày. |
+| **Câu chuyện "Một buổi sáng của Minh"** | Nút "Xem câu chuyện 30 giây" mở 5 cảnh kể lại cách Minh dùng ClearHour cho buổi chạy 6 giờ sáng mai, bằng dự báo thật của thành phố đang chọn. Kết thúc đổi theo dữ liệu: có hôm nên dời giờ, có hôm cứ giữ giờ cũ. Mở thẳng bằng link có `#cau-chuyen`. |
 | **So sánh giờ ra ngoài** | Chọn giờ bạn định đi (hoặc thường đi) và tối đa 3 khoảng rảnh rời nhau, ví dụ trước và sau giờ làm. App trả lời thẳng: "Nên dời sang 13:00–14:00, bụi mịn dự báo thấp hơn 51%" hoặc "Giữ lịch cũ" khi các lúc rảnh khác không tốt hơn đáng kể. Lúc rảnh nào nhiều bụi hơn giờ định đi thì không đề xuất. |
 | **Hành động sau quyết định** | Khung đã chọn đưa được vào Google Lịch, tải tệp .ics (nhắc trước 15 phút), hoặc sao chép thành tin nhắn rủ nhóm có ngày giờ cụ thể, mức bụi dự báo và link mở lại đúng lựa chọn. |
 | **Độ tin cậy của dữ liệu** | Một dòng ngay dưới gợi ý cho biết trạm đo gần nhất (OpenAQ) khớp hay lệch với mô hình, hoặc không có trạm để đối chiếu. Khi trạm đo còn mới và đang xấu hơn dự báo, lời khuyên sức khỏe theo trạm đo. |
@@ -50,6 +51,10 @@ Thời khóa biểu của trường hay ca làm của doanh nghiệp thường k
 6. **Khuyến nghị sức khỏe:** theo Bảng 5 của QĐ 1459 (người bình thường / nhóm nhạy cảm).
 7. **Giờ mở cửa sổ:** PM2.5 ≤ 25 µg/m³ (mức Tốt) thì mở thoải mái, ≤ 50 µg/m³ (Trung bình) thì chỉ mở ngắn, cao hơn thì đóng kín.
 8. **Số đo trạm:** GitHub Actions chạy [scripts/fetch-stations.mjs](scripts/fetch-stations.mjs) theo lịch mỗi giờ (thực tế GitHub chạy thưa hơn, vài giờ một lần), lấy số đo PM2.5 mới nhất của các trạm tại Việt Nam từ [OpenAQ](https://openaq.org/) rồi đưa vào bản deploy dưới dạng `data/stations.json`. App hiện số đo trong vòng 12 giờ, ghi rõ đo lúc nào và so với dự báo của mô hình tại đúng giờ đo; hai nguồn được coi là khớp khi chênh không quá 10 µg/m³ hoặc không quá 1,5 lần. API key nằm trong GitHub Secrets nên không lộ ra trình duyệt, và cũng không tạo commit rác.
+
+### Dễ dùng cho mọi người
+
+Giao diện ưu tiên lời nói thường ngày hơn con số: giờ ghi kiểu "5:00 chiều", mức không khí đi kèm biểu cảm (😊 Tốt, 🙂 Trung bình, 😐 Kém, 😷 Xấu…), chữ cỡ lớn và nút bấm to. Mọi con số (µg/m³, số đo trạm, cách tính) gom vào mục "Chi tiết số liệu"; biểu đồ theo giờ được gập lại, ai cần mới mở.
 
 ## Giới hạn
 
@@ -111,6 +116,7 @@ src/calendar.js             Xuất sự kiện lịch (.ics, Google Lịch)
 src/stations.js             Đọc số đo trạm, tìm trạm gần nhất
 src/chart.js                Biểu đồ SVG tự vẽ (không dùng thư viện)
 src/scene.js                Cảnh thành phố SVG: màu trời theo giờ, bụi mù theo PM2.5
+src/story.js                Câu chuyện "Một buổi sáng của Minh" dùng dự báo thật
 src/api.js                  Gọi Open-Meteo, dữ liệu mẫu dự phòng
 src/app.js                  Kết nối giao diện
 scripts/fetch-stations.mjs  Lấy số đo trạm từ OpenAQ (chạy trong GitHub Actions)

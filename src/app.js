@@ -14,7 +14,6 @@ import {
   findBestWindows,
   ORG_PRESETS,
   PROFILES,
-  reductionPct,
   SAME_ABS,
   SAME_REL,
   VENT_STATUSES,
@@ -22,8 +21,9 @@ import {
   windowStats,
 } from './planner.js';
 import { MOOD, renderScene } from './scene.js';
+import { buildStory, openStory } from './story.js';
 import { ageText, compareWithModel, fetchStations, nearestStation, toLocalTime } from './stations.js';
-import { addDays, datePart, dayLabel, formatClock, hourOf, parseClock, shortDate, weekday } from './time.js';
+import { addDays, datePart, dayLabel, formatClock, friendlyClock, hourOf, parseClock, shortDate, weekday } from './time.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -62,6 +62,8 @@ const CHART_RANGES = [
 const STATUS_ICON = { ok: '✅', caution: '⚠️', stop: '⛔' };
 // Nhân vật trong cảnh minh họa, theo hoạt động đang chọn
 const FIGURE = { run: '🏃', cycle: '🚴', walk: '🚶', moto: '🛵', work: '👷' };
+// Biểu cảm đi kèm mỗi mức, để hiểu ngay mà không cần đọc số
+const FACE = { good: '😊', moderate: '🙂', poor: '😐', unhealthy: '😷', 'very-unhealthy': '😫', hazardous: '⚠️' };
 const DEFAULT_FREE = '5-22';
 
 const params = new URLSearchParams(location.search);
@@ -142,12 +144,12 @@ function hourSelect(value, from, to, label, onchange) {
   return el(
     'select',
     { 'aria-label': label, onchange },
-    ...Array.from({ length: to - from + 1 }, (_, k) => from + k).map((h) => el('option', { value: h, selected: h === value }, formatClock(h))),
+    ...Array.from({ length: to - from + 1 }, (_, k) => from + k).map((h) => el('option', { value: h, selected: h === value }, friendlyClock(h))),
   );
 }
 
 function levelPill(level, extra = '') {
-  return el('span', { class: `pill ${extra}`, style: { background: level.display, color: level.ink } }, level.label);
+  return el('span', { class: `pill ${extra}`, style: { background: level.display, color: level.ink } }, `${FACE[level.id]} ${level.label}`);
 }
 
 const isSample = () => state.series.source === 'sample';
@@ -175,14 +177,26 @@ function dayWithDate(dateStr) {
   return isSample() ? dayName(dateStr) : `${dayName(dateStr)} ${shortDate(dateStr)}`;
 }
 
+/** "hôm nay", "ngày mai", hoặc thứ trong tuần; ngày cụ thể khi đang xem dữ liệu mẫu. */
+function dayPhrase(dateStr) {
+  if (isSample()) return dayName(dateStr);
+  const d = dayLabel(dateStr, todayStr());
+  return d === 'Hôm nay' || d === 'Ngày mai' ? d.toLowerCase() : d;
+}
+
 function windowLabel(w) {
   const t = state.series.times[w.start];
   const h = hourOf(t);
+  const time = friendlyClock(h);
   return {
     day: dayName(datePart(t)),
     range: `${formatClock(h)}–${formatClock(h + w.hours)}`,
+    time,
+    when: `${time} ${dayPhrase(datePart(t))}`,
   };
 }
+
+const durationText = (hours) => (hours < 1 ? '30 phút' : `${hours} tiếng`);
 
 /** Nhãn có ngày tháng cụ thể, dùng cho nội dung gửi đi (người nhận đọc vào lúc khác). */
 function absoluteLabel(w) {
@@ -313,8 +327,9 @@ function renderAll() {
   renderNow();
   renderPlanner();
   renderHero();
-  renderChartSection();
+  if ($('chart-fold').open) renderChartSection();
   renderVentilation();
+  $('story-open').hidden = !buildStory(state.series);
   renderOrg();
   syncUrl();
 }
@@ -345,28 +360,21 @@ function stationInfo() {
   return { st, local, model, ageMs, age: ageText(ageMs), match: compareWithModel(st.pm25, model), level: levelForPm25(st.pm25) };
 }
 
-/** Một câu cho biết gợi ý đang dựa trên dữ liệu đáng tin đến đâu. */
+/** Một câu bằng lời thường cho biết gợi ý đang dựa trên dữ liệu đáng tin đến đâu (số liệu nằm trong phần chi tiết). */
 function dataStatus(info) {
   const s = state.series;
   if (isSample()) {
     const t = s.times[s.nowIndex];
-    return { tone: 'warn', text: `Đang xem dữ liệu mẫu của Hà Nội ngày ${shortDate(datePart(t))}/${t.slice(0, 4)}, không phải dự báo hiện tại.` };
+    return { tone: 'warn', text: `Đang xem dữ liệu mẫu ngày ${shortDate(datePart(t))}/${t.slice(0, 4)}, không phải dự báo hiện tại.` };
   }
-  if (!info) {
-    return { tone: 'info', text: 'Không có số đo trạm nào trong 12 giờ qua (bán kính 30 km) để đối chiếu. Gợi ý dựa hoàn toàn trên mô hình dự báo, ô lưới khoảng 45 km.' };
-  }
-  const pair = `${num(info.st.pm25)} so với ${num(info.model)} µg/m³, số đo ${info.age}`;
-  if (info.match === 'agree') return { tone: 'ok', text: `Trạm đo gần nhất khá khớp với mô hình (${pair}).` };
+  if (!info) return { tone: 'info', text: 'Gần bạn chưa có trạm đo để đối chiếu, gợi ý dựa trên dự báo.' };
+  // Số đo trạm có thể đã cũ vài giờ nên luôn nói rõ đo lúc nào
+  const at = `Lúc ${info.local.slice(11, 16)}, trạm đo gần đây`;
+  if (info.match === 'agree') return { tone: 'ok', text: `${at} cho kết quả gần giống dự báo.` };
   if (info.match === 'station-higher') {
-    return {
-      tone: 'warn',
-      text: `Trạm đo gần nhất đang cao hơn mô hình nhiều (${pair}). Thứ tự giờ ít bụi, nhiều bụi có thể vẫn đúng, nhưng mức bụi thực tế có thể cao hơn dự báo.`,
-    };
+    return { tone: 'warn', text: `${at} thấy nhiều bụi hơn dự báo. Nếu ra ngoài, nên mang theo khẩu trang.` };
   }
-  return {
-    tone: 'warn',
-    text: `Trạm đo gần nhất đang thấp hơn mô hình nhiều (${pair}). Chưa rõ nguồn nào đúng hơn: mô hình có thể dự báo quá cao, hoặc cảm biến gặp trục trặc.`,
-  };
+  return { tone: 'warn', text: `${at} thấy ít bụi hơn dự báo. Chưa rõ bên nào đúng hơn.` };
 }
 
 function renderNow() {
@@ -375,14 +383,9 @@ function renderNow() {
   const aqi = combinedAqi({ pm2_5: nowcast(back(s.pm25)), pm10: nowcast(back(s.pm10)) });
   const modelLevel = levelForAqi(aqi);
   $('now-aqi').textContent = int(aqi);
-  $('now-aqi').style.setProperty('--lvl', modelLevel?.display ?? 'var(--line)');
-  const pill = $('now-level');
-  pill.textContent = modelLevel?.label ?? '–';
-  pill.style.background = modelLevel?.display ?? '';
-  pill.style.color = modelLevel?.ink ?? '';
   $('now-pm25').textContent = num(s.current.pm25 ?? s.pm25[s.nowIndex]);
 
-  // Các phép so sánh theo ngày nằm riêng trong phần mở rộng, không lẫn với số liệu theo giờ
+  // Các phép so sánh theo ngày nằm trong phần số liệu chi tiết
   const mean = dailyMean(s, todayStr());
   const ratio = mean / WHO_PM25_24H;
   $('now-daymean').textContent = num(mean);
@@ -396,11 +399,20 @@ function renderNow() {
   const profile = profileOf();
   const stationWorse = Boolean(info) && info.ageMs <= 3 * 3600e3 && LEVELS.indexOf(info.level) > LEVELS.indexOf(modelLevel);
   const level = stationWorse ? info.level : modelLevel;
+  $('now-face').textContent = level ? FACE[level.id] : '🙂';
+  $('now-face').style.setProperty('--lvl', level?.display ?? 'var(--line)');
+  $('now-level').textContent = level ? `Không khí: ${level.label}` : '–';
   $('now-advice').replaceChildren(
     el('strong', {}, `${profile.short}: `),
     level ? level.advice[profile.sensitive ? 'sensitive' : 'normal'] : '',
-    stationWorse ? ` Lời khuyên này theo số đo trạm (mức ${info.level.label}), đang xấu hơn dự báo của mô hình.` : '',
+    stationWorse ? ' (Đánh giá theo trạm đo gần đây, đang xấu hơn dự báo.)' : '',
   );
+
+  const note = $('now-station');
+  note.hidden = !info;
+  if (info) {
+    note.textContent = `📍 Trạm đo gần nhất (${info.st.name}, cách ${num(info.st.km)} km) đo được mức «${info.level.label}» lúc ${info.local.slice(11, 16)}.`;
+  }
 }
 
 function renderStation(info) {
@@ -509,8 +521,8 @@ function renderPlanner() {
   $('planned').replaceChildren(
     el('option', { value: '' }, '— Chưa chọn —'),
     ...choices.map((i) => {
-      const { day, range } = windowLabel({ start: i, hours: state.hours });
-      return el('option', { value: i, selected: i === state.planned }, `${day} ${range}`);
+      const { day, time } = windowLabel({ start: i, hours: state.hours });
+      return el('option', { value: i, selected: i === state.planned }, `${day} · ${time}`);
     }),
   );
   const mine = state.planned != null ? windowStats(s.pm25, state.planned, state.hours, act.ventilation) : null;
@@ -526,27 +538,28 @@ function renderPlanner() {
   const chosen = options.find((w) => w.start === state.selected) ?? (mine && !shouldSwitch ? mine : top);
   Object.assign(state, { best: suggestions, mine, chosen });
 
-  const free = state.free.map((r) => `${formatClock(r.from)}–${formatClock(r.to)}`).join(', ');
-  $('plan-summary').textContent = `Tùy chỉnh: ${act.icon} ${act.short} · ${state.hours < 1 ? '30 phút' : `${state.hours} giờ`} · rảnh ${free}`;
+  const free = state.free.map((r) => `${friendlyClock(r.from)}–${friendlyClock(r.to)}`).join(', ');
+  $('plan-summary').textContent = `Tùy chỉnh: ${act.icon} ${act.short} · ${durationText(state.hours)} · rảnh ${free}`;
 
   const out = [];
   if (!options.length) {
-    out.push(el('p', { class: 'empty' }, 'Không còn giờ nào phù hợp trong các khoảng rảnh đã chọn. Thử chọn ngày khác hoặc nới khoảng rảnh trong phần Tùy chỉnh.'));
+    out.push(el('p', { class: 'empty' }, 'Không còn giờ nào phù hợp trong những lúc bạn rảnh. Thử chọn ngày khác, hoặc mở phần Tùy chỉnh để thêm giờ rảnh.'));
   } else {
     out.push(verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers: others.length > 0, chosen }));
     const level = levelForAqi(chosen.aqi);
     if (chosen.aqi > (profile.sensitive ? 100 : 150)) {
-      out.push(el('p', { class: 'warn' }, `Khung đã chọn vẫn ở mức ${level.label}. ${level.advice[profile.sensitive ? 'sensitive' : 'normal']}`));
+      out.push(el('p', { class: 'warn' }, `${FACE[level.id]} Giờ đã chọn vẫn ở mức ${level.label}. ${level.advice[profile.sensitive ? 'sensitive' : 'normal']}`));
     }
   }
 
-  const status = dataStatus(stationInfo());
+  const info = stationInfo();
+  const status = dataStatus(info);
   out.push(
     el(
       'p',
       { class: `status status--${status.tone}` },
       el('span', { class: 'status__icon', 'aria-hidden': 'true' }, status.tone === 'ok' ? '✓' : status.tone === 'warn' ? '!' : 'i'),
-      el('span', {}, el('strong', {}, 'Độ tin cậy của dữ liệu: '), status.text),
+      el('span', {}, status.text),
     ),
   );
 
@@ -555,25 +568,34 @@ function renderPlanner() {
       el(
         'details',
         { class: 'more', open: state.optionsOpen, ontoggle: (e) => (state.optionsOpen = e.target.open) },
-        el('summary', {}, `Xem tất cả lựa chọn (${options.length})`),
+        el('summary', {}, `Xem các giờ khác (${options.length})`),
         optionList({ options, mine, suggestions, chosen }),
       ),
     );
   }
 
-  const notes = [`Phần trăm tính trên PM2.5 trung bình dự báo của cả khung. Hai khung chênh dưới ${SAME_REL * 100}% hoặc dưới ${SAME_ABS} µg/m³ được coi là tương đương.`];
-  if (chosen && profile.id === 'adult') {
-    notes.push(`Ước tính ở khung đã chọn, người lớn hít vào khoảng ${int(chosen.dose)} µg bụi mịn (cường độ ${act.intensity}, ~${num(act.ventilation)} m³ không khí/giờ).`);
-  } else if (chosen) {
-    notes.push(`Hồ sơ «${profile.short}» chỉ đổi lời khuyên và ngưỡng cảnh báo; số liệu bụi giữ nguyên. Không hiện ước tính µg hít vào vì hệ số thông khí là của người lớn.`);
+  // Mọi con số gom vào một chỗ, ai cần mới mở ra
+  const rows = [];
+  const line = (label, w) => rows.push(el('li', {}, `${label} (${windowLabel(w).range}): PM2.5 trung bình dự báo ${num(w.mean)} µg/m³.`));
+  if (mine) line('Giờ bạn định đi', mine);
+  if (chosen && chosen.start !== mine?.start) line('Giờ đã chọn', chosen);
+  if (worst && worst.start !== chosen?.start) line('Giờ nhiều bụi nhất trong lúc rảnh', worst);
+  if (info) {
+    rows.push(el('li', {}, `Trạm ${info.st.name} (cách ${num(info.st.km)} km) đo ${num(info.st.pm25)} µg/m³ lúc ${info.local.slice(11, 16)} (${info.age}); mô hình dự báo lúc đó ${num(info.model)} µg/m³.`));
   }
-  out.push(el('details', { class: 'more' }, el('summary', {}, 'Cách tính'), el('p', { class: 'muted small' }, notes.join(' '))));
+  rows.push(el('li', {}, `Phần trăm tính trên PM2.5 trung bình dự báo của cả khung giờ. Hai giờ chênh dưới ${SAME_REL * 100}% hoặc dưới ${SAME_ABS} µg/m³ được coi là gần như nhau.`));
+  if (chosen && profile.id === 'adult') {
+    rows.push(el('li', {}, `Ở giờ đã chọn, người lớn hít vào khoảng ${int(chosen.dose)} µg bụi mịn (cường độ ${act.intensity}, ~${num(act.ventilation)} m³ không khí/giờ).`));
+  } else if (chosen) {
+    rows.push(el('li', {}, `Hồ sơ «${profile.short}» chỉ đổi lời khuyên và ngưỡng cảnh báo; số liệu bụi giữ nguyên.`));
+  }
+  out.push(el('details', { class: 'more' }, el('summary', {}, 'Chi tiết số liệu'), el('ul', { class: 'facts' }, ...rows)));
   $('results').replaceChildren(...out);
 }
 
-/** Một bên của phép so sánh: cảnh trời minh họa đúng giờ đó, kèm giờ, ngày, PM2.5 trung bình dự báo và mức. */
+/** Một bên của phép so sánh: cảnh trời minh họa đúng giờ đó, kèm giờ và mức không khí bằng lời. */
 function sceneCard(tag, w, extraClass = '') {
-  const { day, range } = windowLabel(w);
+  const { day, time, range } = windowLabel(w);
   const level = levelForAqi(w.aqi);
   const art = el('div', { class: 'scene-card__art' });
   art.append(
@@ -587,7 +609,7 @@ function sceneCard(tag, w, extraClass = '') {
       figureScale: 0.3,
       seed: 23,
       id: `m${w.start}`,
-      label: `Minh họa bầu trời ${day.toLowerCase()} ${range}, PM2.5 dự báo ${num(w.mean)} µg/m³, mức ${level.label}`,
+      label: `Minh họa bầu trời ${day.toLowerCase()} ${range}, không khí mức ${level.label}`,
     }),
   );
   return el(
@@ -598,42 +620,29 @@ function sceneCard(tag, w, extraClass = '') {
       'figcaption',
       {},
       el('span', { class: 'scene-card__tag' }, tag),
-      el('span', { class: 'scene-card__time' }, range),
-      el('span', { class: 'scene-card__day' }, day),
-      el('span', { class: 'scene-card__pm' }, `${num(w.mean)} µg/m³ `, levelPill(level, 'pill--sm')),
+      el('span', { class: 'scene-card__time' }, time),
+      el('span', { class: 'scene-card__day' }, `${day} · ${durationText(w.hours)}`),
+      el('span', { class: 'scene-card__pm' }, levelPill(level)),
     ),
   );
 }
 
-function verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers, chosen }) {
+function verdictCard({ mine, top, cmp, shouldSwitch, hasOthers, chosen }) {
   let title;
   let sub;
   let duel;
   if (mine && shouldSwitch) {
-    const tl = windowLabel(top);
-    title = `Nên dời sang ${tl.day.toLowerCase()} ${tl.range}`;
-    sub = ['Bụi mịn dự báo thấp hơn ', el('strong', {}, `${cmp.pct}%`), ' so với giờ bạn định đi.'];
-    duel = [sceneCard('Giờ bạn định đi', mine), el('span', { class: 'duel__arrow', 'aria-hidden': 'true' }, '→'), sceneCard('Đề xuất', top, 'scene-card--to')];
+    title = `Nên dời sang ${windowLabel(top).when}`;
+    sub = ['Ít bụi hơn khoảng ', el('strong', {}, `${cmp.pct}%`), ' so với giờ bạn định đi.'];
+    duel = [sceneCard('Giờ bạn định đi', mine), el('span', { class: 'duel__arrow', 'aria-hidden': 'true' }, '→'), sceneCard('Nên đi lúc', top, 'scene-card--to')];
   } else if (mine) {
-    const ml = windowLabel(mine);
-    title = `Giữ lịch cũ: ${ml.day.toLowerCase()} ${ml.range}`;
-    sub = ['Không có lúc rảnh nào khác để so sánh.'];
-    if (top) {
-      const tl = windowLabel(top);
-      sub = [`Lúc rảnh ít bụi nhất (${tl.day.toLowerCase()} ${tl.range}) chỉ chênh ${num(Math.abs(cmp.diff))} µg/m³, không đáng để đổi lịch.`];
-    } else if (hasOthers) {
-      sub = ['Những lúc rảnh khác đều nhiều bụi hơn giờ này.'];
-    }
+    title = `Cứ giữ giờ cũ: ${windowLabel(mine).when}`;
+    sub = [top ? 'Những lúc rảnh khác cũng không ít bụi hơn bao nhiêu, không cần đổi.' : hasOthers ? 'Những lúc rảnh khác đều nhiều bụi hơn giờ này.' : 'Không có lúc rảnh nào khác để so sánh.'];
     duel = [sceneCard('Giờ bạn định đi', mine, 'scene-card--to')];
   } else {
-    const tl = windowLabel(top);
-    const spread = worst && worst.start !== top.start ? reductionPct(top.mean, worst.mean) : 0;
-    title = `Ít bụi nhất trong lúc bạn rảnh: ${tl.day.toLowerCase()} ${tl.range}`;
-    sub = [
-      spread ? `Thấp hơn ${spread}% so với giờ nhiều bụi nhất trong lúc bạn rảnh (${windowLabel(worst).range}). ` : '',
-      'Chọn «Giờ bạn định đi» ở trên để biết đổi giờ giúp giảm bao nhiêu so với lịch của bạn.',
-    ];
-    duel = [sceneCard('Đề xuất', top, 'scene-card--to')];
+    title = `Lúc ít bụi nhất: ${windowLabel(top).when}`;
+    sub = ['Chọn «Giờ bạn định đi» ở trên để biết có nên đổi giờ không.'];
+    duel = [sceneCard('Nên đi lúc', top, 'scene-card--to')];
   }
   return el(
     'div',
@@ -648,39 +657,36 @@ function verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers, chosen })
 function optionList({ options, mine, suggestions, chosen }) {
   return el(
     'ul',
-    { class: 'options', 'aria-label': 'Các lựa chọn để so sánh' },
+    { class: 'options', 'aria-label': 'Các giờ để so sánh' },
     ...options.map((w) => {
-      const { day, range } = windowLabel(w);
+      const { day, time } = windowLabel(w);
       const isMine = mine?.start === w.start;
       const isChosen = chosen.start === w.start;
-      let delta = null;
+      const level = levelForAqi(w.aqi);
+      let note = isMine ? 'Giờ bạn định đi' : '';
       if (mine && !isMine) {
         const c = compareWithPlan(mine, w);
-        delta = c.relation === 'same' ? 'gần tương đương giờ bạn định đi' : `thấp hơn ${c.pct}% so với giờ bạn định đi`;
+        note = c.relation === 'same' ? 'Gần như giờ bạn định đi' : `Ít bụi hơn ${c.pct}%`;
       }
       return el(
         'li',
         { class: `option${isChosen ? ' option--chosen' : ''}` },
         isMine
           ? el('span', { class: 'option__mark option__mark--plan', title: 'Giờ bạn định đi' })
-          : el('span', { class: 'option__mark', title: 'Khung đề xuất' }, suggestions.indexOf(w) + 1),
+          : el('span', { class: 'option__mark', title: 'Giờ nên đi' }, suggestions.indexOf(w) + 1),
         el(
           'span',
           { class: 'option__main' },
-          el('span', { class: 'option__time' }, `${day} · ${range}`),
-          el(
-            'span',
-            { class: 'option__detail' },
-            `${isMine ? 'Giờ bạn định đi · ' : ''}PM2.5 ${num(w.mean)} µg/m³ · ${levelForAqi(w.aqi).label}${delta ? ` · ${delta}` : ''}`,
-          ),
+          el('span', { class: 'option__time' }, `${time} · ${day}`),
+          el('span', { class: 'option__detail' }, `${FACE[level.id]} ${level.label}${note ? ` · ${note}` : ''}`),
         ),
         el(
           'button',
           {
             type: 'button',
-            class: `btn btn--xs ${isChosen ? '' : 'btn--ghost'}`,
+            class: `btn btn--sm ${isChosen ? '' : 'btn--ghost'}`,
             'aria-pressed': String(isChosen),
-            'aria-label': `Chọn khung ${day.toLowerCase()} ${range}`,
+            'aria-label': `Chọn ${time} ${day.toLowerCase()}`,
             onclick: () => {
               state.selected = w.start;
               renderAll();
@@ -693,12 +699,11 @@ function optionList({ options, mine, suggestions, chosen }) {
   );
 }
 
-/** Hành động sau quyết định: đưa khung đã chọn vào lịch hoặc gửi cho nhóm. */
+/** Hành động sau quyết định: đưa giờ đã chọn vào lịch hoặc gửi cho bạn bè. */
 function chosenBar(chosen, mine) {
-  const { day, range } = windowLabel(chosen);
-  const head = el('p', { class: 'chosen__label' }, 'Lưu khung đã chọn: ', el('strong', {}, `${day.toLowerCase()} ${range}`));
+  const head = el('p', { class: 'chosen__label' }, 'Đã chọn: ', el('strong', {}, windowLabel(chosen).when));
   if (isSample()) {
-    return el('div', { class: 'chosen' }, head, el('p', { class: 'muted small' }, 'Đây là lịch minh họa từ dữ liệu mẫu nên không xuất ra lịch hay tin nhắn.'));
+    return el('div', { class: 'chosen' }, head, el('p', { class: 'muted small' }, 'Đây là lịch minh họa từ dữ liệu mẫu nên không thêm vào lịch hay gửi đi được.'));
   }
   const ev = calendarEvent(chosen);
   const status = el('span', { class: 'muted small', 'aria-live': 'polite' });
@@ -710,21 +715,21 @@ function chosenBar(chosen, mine) {
     el(
       'div',
       { class: 'chosen__actions' },
-      el('a', { class: 'btn btn--xs', href: googleCalendarUrl(ev), target: '_blank', rel: 'noopener' }, '📅 Thêm vào Google Lịch'),
-      el('button', { type: 'button', class: 'btn btn--ghost btn--xs', onclick: () => downloadIcs(ev, ev.fileName) }, '⬇ Tệp lịch .ics'),
+      el('a', { class: 'btn', href: googleCalendarUrl(ev), target: '_blank', rel: 'noopener' }, '📅 Thêm vào lịch'),
       el(
         'button',
         {
           type: 'button',
-          class: 'btn btn--ghost btn--xs',
+          class: 'btn btn--ghost',
           onclick: () =>
             copyText(preview.textContent, status, () => {
               preview.hidden = false;
               selectContents(preview);
             }),
         },
-        '💬 Sao chép tin nhắn rủ nhóm',
+        '💬 Gửi cho bạn bè',
       ),
+      el('button', { type: 'button', class: 'btn btn--link', onclick: () => downloadIcs(ev, ev.fileName) }, 'Tải tệp lịch (.ics)'),
       status,
     ),
     preview,
@@ -760,7 +765,7 @@ function renderHero() {
     ...[
       idx.includes(s.nowIndex) ? mark(s.nowIndex, 'hero__mark--now', '', 'Bây giờ') : null,
       state.mine ? mark(state.mine.start, 'hero__mark--plan', '', 'Giờ bạn định đi') : null,
-      ...state.best.map((w, n) => mark(w.start, '', String(n + 1), `Khung đề xuất ${n + 1}`)),
+      ...state.best.map((w, n) => mark(w.start, '', String(n + 1), `Giờ nên đi ${n + 1}`)),
     ].filter(Boolean),
   );
   drawHeroScene();
@@ -791,11 +796,10 @@ function drawHeroScene() {
   if (i === s.nowIndex) tags.push('bây giờ');
   if (state.mine?.start === i) tags.push('giờ bạn định đi');
   const n = state.best.findIndex((w) => w.start === i);
-  if (n >= 0) tags.push(`đề xuất ${n + 1}`);
+  if (n >= 0) tags.push(`giờ nên đi ${n + 1}`);
   $('hero-caption').replaceChildren(
-    el('strong', {}, `${day} · ${t.slice(11, 16)}`),
-    ` — PM2.5 dự báo ${num(pm)} µg/m³ `,
-    level ? levelPill(level, 'pill--sm') : '',
+    el('strong', {}, `${day} · ${friendlyClock(hourOf(t))}`),
+    level ? levelPill(level) : '',
     tags.length ? el('span', { class: 'hero__tags' }, tags.join(' · ')) : '',
   );
 }
@@ -815,8 +819,8 @@ function renderVentilation() {
         el(
           'span',
           { class: `vent__pick${i === 0 ? ' vent__pick--top' : ''}` },
-          `${windowLabel(w).day} ${windowLabel(w).range}`,
-          el('small', {}, ` · PM2.5 ~${num(w.mean)}`),
+          `${windowLabel(w).day} · ${windowLabel(w).time}`,
+          el('small', {}, ` ${FACE[levelForAqi(w.aqi).id]}`),
         ),
       ),
     );
@@ -1030,7 +1034,11 @@ function renderOrgPlan() {
             'div',
             { class: `verdict verdict--${v.status}` },
             el('span', { class: 'verdict__head' }, el('span', { 'aria-hidden': 'true' }, STATUS_ICON[v.status]), v.text),
-            el('span', { class: 'verdict__meta' }, `PM2.5 cao nhất ${num(v.peak)}, trung bình ${num(v.mean)} µg/m³ · ${v.level.label}`),
+            el(
+              'span',
+              { class: 'verdict__meta', title: `PM2.5 cao nhất ${num(v.peak)}, trung bình ${num(v.mean)} µg/m³` },
+              `${FACE[v.level.id]} Không khí ${v.level.label.toLowerCase()}`,
+            ),
           ),
         );
       }),
@@ -1066,6 +1074,21 @@ function copyNotice() {
   copyText($('notice').textContent, $('copy-status'), () => {
     $('notice').closest('details').open = true;
     selectContents($('notice'));
+  });
+}
+
+// ---------- Câu chuyện ----------
+
+function startStory() {
+  openStory({
+    series: state.series,
+    place: placeName(),
+    sample: isSample(),
+    figure: '🏃',
+    onFinish: () => {
+      $('ca-nhan').scrollIntoView({ behavior: 'smooth' });
+      $('planned').focus({ preventScroll: true });
+    },
   });
 }
 
@@ -1127,12 +1150,18 @@ function initControls() {
     drawHeroScene();
   });
 
+  $('chart-fold').addEventListener('toggle', (e) => {
+    if (e.target.open && state.series) renderChartSection();
+  });
+
+  $('story-open').addEventListener('click', startStory);
+
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       if (!state.series) return;
-      renderChartSection();
+      if ($('chart-fold').open) renderChartSection();
       drawHeroScene();
     }, 150);
   });
@@ -1141,7 +1170,10 @@ function initControls() {
 }
 
 initControls();
-load();
+// Link có #cau-chuyen thì mở câu chuyện ngay khi có dữ liệu (tiện khi thuyết trình)
+load().then(() => {
+  if (location.hash === '#cau-chuyen' && state.series && buildStory(state.series)) startStory();
+});
 fetchStations().then((list) => {
   state.stations = list;
   if (state.series) renderAll();
