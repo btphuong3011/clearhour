@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Chỉ số chất lượng không khí Việt Nam (VN_AQI) theo Quyết định 1459/QĐ-TCMT (12/11/2019)
 // của Tổng cục Môi trường. Bảng 2: giá trị BPi (µg/m³) cho PM2.5 và PM10.
 
@@ -30,73 +31,73 @@ export const LEVELS = [
   {
     id: 'good',
     max: 50,
-    label: 'Tốt',
+    label: t('Tốt'),
     color: 'rgb(0,228,0)',
     display: '#2fb94a',
     ink: '#0b2e14',
     advice: {
-      normal: 'Thoải mái hoạt động ngoài trời.',
-      sensitive: 'Thoải mái hoạt động ngoài trời.',
+      normal: t('Thoải mái hoạt động ngoài trời.'),
+      sensitive: t('Thoải mái hoạt động ngoài trời.'),
     },
   },
   {
     id: 'moderate',
     max: 100,
-    label: 'Trung bình',
+    label: t('Trung bình'),
     color: 'rgb(255,255,0)',
     display: '#f2c200',
     ink: '#3a2f00',
     advice: {
-      normal: 'Thoải mái hoạt động ngoài trời.',
-      sensitive: 'Vẫn có thể ra ngoài, nhưng hãy để ý các dấu hiệu như ho hoặc khó thở.',
+      normal: t('Thoải mái hoạt động ngoài trời.'),
+      sensitive: t('Vẫn có thể ra ngoài, nhưng hãy để ý các dấu hiệu như ho hoặc khó thở.'),
     },
   },
   {
     id: 'poor',
     max: 150,
-    label: 'Kém',
+    label: t('Kém'),
     color: 'rgb(255,126,0)',
     display: '#ff7e00',
     ink: '#3d1d00',
     advice: {
-      normal: 'Nếu thấy cay mắt, ho hoặc đau họng, nên bớt thời gian ở ngoài trời. Học sinh nên rút ngắn giờ tập thể dục.',
-      sensitive: 'Nên giảm vận động mạnh và rút ngắn thời gian ngoài trời. Người bị hen có thể cần dùng thuốc thường xuyên hơn.',
+      normal: t('Nếu thấy cay mắt, ho hoặc đau họng, nên bớt thời gian ở ngoài trời. Học sinh nên rút ngắn giờ tập thể dục.'),
+      sensitive: t('Nên giảm vận động mạnh và rút ngắn thời gian ngoài trời. Người bị hen có thể cần dùng thuốc thường xuyên hơn.'),
     },
   },
   {
     id: 'unhealthy',
     max: 200,
-    label: 'Xấu',
+    label: t('Xấu'),
     color: 'rgb(255,0,0)',
     display: '#e5262b',
     ink: '#ffffff',
     advice: {
-      normal: 'Giảm vận động mạnh ngoài trời, tránh tập luyện kéo dài, nghỉ ngơi trong nhà nhiều hơn.',
-      sensitive: 'Nên ở trong nhà và hạn chế vận động mạnh. Nếu bắt buộc ra ngoài, hãy đeo khẩu trang đạt chuẩn (N95/KN95).',
+      normal: t('Giảm vận động mạnh ngoài trời, tránh tập luyện kéo dài, nghỉ ngơi trong nhà nhiều hơn.'),
+      sensitive: t('Nên ở trong nhà và hạn chế vận động mạnh. Nếu bắt buộc ra ngoài, hãy đeo khẩu trang đạt chuẩn (N95/KN95).'),
     },
   },
   {
     id: 'very-unhealthy',
     max: 300,
-    label: 'Rất xấu',
+    label: t('Rất xấu'),
     color: 'rgb(143,63,151)',
     display: '#8f3f97',
     ink: '#ffffff',
     advice: {
-      normal: 'Hạn chế tối đa ra ngoài, chuyển mọi hoạt động vào trong nhà. Nếu phải ra ngoài, đeo khẩu trang đạt chuẩn.',
-      sensitive: 'Ở trong nhà và hạn chế vận động mạnh.',
+      normal: t('Hạn chế tối đa ra ngoài, chuyển mọi hoạt động vào trong nhà. Nếu phải ra ngoài, đeo khẩu trang đạt chuẩn.'),
+      sensitive: t('Ở trong nhà và hạn chế vận động mạnh.'),
     },
   },
   {
     id: 'hazardous',
     max: Infinity,
-    label: 'Nguy hại',
+    label: t('Nguy hại'),
     color: 'rgb(126,0,35)',
     display: '#7e0023',
     ink: '#ffffff',
     advice: {
-      normal: 'Mọi người nên ở trong nhà, đóng kín cửa. Nếu phải ra ngoài, đeo khẩu trang đạt chuẩn.',
-      sensitive: 'Mọi người nên ở trong nhà, đóng kín cửa. Nếu phải ra ngoài, đeo khẩu trang đạt chuẩn.',
+      normal: t('Mọi người nên ở trong nhà, đóng kín cửa. Nếu phải ra ngoài, đeo khẩu trang đạt chuẩn.'),
+      sensitive: t('Mọi người nên ở trong nhà, đóng kín cửa. Nếu phải ra ngoài, đeo khẩu trang đạt chuẩn.'),
     },
   },
 ];

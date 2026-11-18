@@ -4,6 +4,8 @@
 
 🔗 **Bản demo:** https://btphuong3011.github.io/clearhour/
 
+Chọn **Tiếng Việt / English** trên thanh điều hướng để đổi ngôn ngữ. ClearHour ghi nhớ lựa chọn và lưu ngôn ngữ trong link chia sẻ.
+
 Dự án demo cho **Youth Digital Citizen Challenge 2026** – chủ đề *Urban Air-chitects: Designing Healthier Air for Cities* (UNDP Việt Nam & Chính phủ Nhật Bản).
 
 ![Giao diện ClearHour](docs/screenshot.jpg)

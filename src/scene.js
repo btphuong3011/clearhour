@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Cảnh thành phố vẽ bằng SVG: màu trời theo giờ trong ngày, lớp bụi mù đậm nhạt theo nồng độ PM2.5 dự báo.
 // Nhà phố, cao ốc, cây và đường được sinh ngẫu nhiên có hạt giống nên lần nào vẽ cũng giống nhau.
 
@@ -38,12 +39,12 @@ export function skyAt(hour) {
 
 /** Lời nhân vật trong cảnh theo mức chất lượng không khí. */
 export const MOOD = {
-  good: 'Trời trong, ra ngoài thôi!',
-  moderate: 'Không khí tạm ổn',
-  poor: 'Hơi bụi, đi nhẹ thôi',
-  unhealthy: 'Bụi nhiều, nhớ khẩu trang!',
-  'very-unhealthy': 'Ở trong nhà thì hơn',
-  hazardous: 'Đóng cửa, ở trong nhà!',
+  good: t('Trời trong, ra ngoài thôi!'),
+  moderate: t('Không khí tạm ổn'),
+  poor: t('Hơi bụi, đi nhẹ thôi'),
+  unhealthy: t('Bụi nhiều, nhớ khẩu trang!'),
+  'very-unhealthy': t('Ở trong nhà thì hơn'),
+  hazardous: t('Đóng cửa, ở trong nhà!'),
 };
 
 function rng(seed) {

@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Số đo PM2.5 thực tế từ các trạm quan trắc và cảm biến (OpenAQ), dùng để đối chiếu với dự báo mô hình.
 // Tệp data/stations.json do GitHub Actions cập nhật (xem scripts/fetch-stations.mjs). Lịch đặt mỗi giờ
 // nhưng GitHub chạy không đều, thực tế có khi 6–8 tiếng mới một lần, nên số đo có thể cũ vài giờ.
@@ -61,7 +62,7 @@ export function toLocalTime(utc, utcOffsetSeconds = 0) {
 /** Độ cũ của số đo, dạng chữ: "vừa cập nhật", "25 phút trước", "7 giờ trước". */
 export function ageText(ms) {
   const minutes = Math.max(0, Math.round(ms / 60000));
-  if (minutes < 5) return 'vừa cập nhật';
-  if (minutes < 60) return `${minutes} phút trước`;
-  return `${Math.round(minutes / 60)} giờ trước`;
+  if (minutes < 5) return t('vừa cập nhật');
+  if (minutes < 60) return t`${minutes} phút trước`;
+  return t`${Math.round(minutes / 60)} giờ trước`;
 }

@@ -1,22 +1,23 @@
+import { t } from './i18n.js';
 import { aqiFromConcentration, levelForAqi } from './aqi.js';
 import { addDays, datePart, hourOf, parseClock } from './time.js';
 
 export const PROFILES = [
-  { id: 'adult', label: 'Người trưởng thành khỏe mạnh', short: 'Người khỏe mạnh', icon: '🧑', sensitive: false },
-  { id: 'child', label: 'Trẻ em', short: 'Trẻ em', icon: '🧒', sensitive: true },
-  { id: 'elderly', label: 'Người cao tuổi', short: 'Người cao tuổi', icon: '🧓', sensitive: true },
-  { id: 'respiratory', label: 'Có bệnh hô hấp / tim mạch', short: 'Bệnh hô hấp, tim mạch', icon: '🫁', sensitive: true },
-  { id: 'pregnant', label: 'Phụ nữ mang thai', short: 'Phụ nữ mang thai', icon: '🤰', sensitive: true },
+  { id: 'adult', label: t('Người trưởng thành khỏe mạnh'), short: t('Người khỏe mạnh'), icon: '🧑', sensitive: false },
+  { id: 'child', label: t('Trẻ em'), short: t('Trẻ em'), icon: '🧒', sensitive: true },
+  { id: 'elderly', label: t('Người cao tuổi'), short: t('Người cao tuổi'), icon: '🧓', sensitive: true },
+  { id: 'respiratory', label: t('Có bệnh hô hấp / tim mạch'), short: t('Bệnh hô hấp, tim mạch'), icon: '🫁', sensitive: true },
+  { id: 'pregnant', label: t('Phụ nữ mang thai'), short: t('Phụ nữ mang thai'), icon: '🤰', sensitive: true },
 ];
 
 // Mức thông khí (m³ không khí hít vào mỗi giờ) theo cường độ hoạt động của người trưởng thành,
 // làm tròn từ US EPA Exposure Factors Handbook (2011), chương 6.
 export const ACTIVITIES = [
-  { id: 'run', label: 'Chạy bộ, đá bóng, tập thể dục', short: 'Chạy bộ / thể thao', icon: '🏃', intensity: 'mạnh', ventilation: 3.0 },
-  { id: 'cycle', label: 'Đạp xe', short: 'Đạp xe', icon: '🚲', intensity: 'vừa', ventilation: 1.6 },
-  { id: 'walk', label: 'Đi bộ, đưa đón con', short: 'Đi bộ / đưa đón con', icon: '🚶', intensity: 'nhẹ–vừa', ventilation: 1.0 },
-  { id: 'moto', label: 'Di chuyển bằng xe máy', short: 'Đi xe máy', icon: '🛵', intensity: 'nhẹ', ventilation: 0.7 },
-  { id: 'work', label: 'Làm việc ngoài trời (giao hàng, xây dựng…)', short: 'Làm việc ngoài trời', icon: '📦', intensity: 'vừa', ventilation: 1.6 },
+  { id: 'run', label: t('Chạy bộ, đá bóng, tập thể dục'), short: t('Chạy bộ / thể thao'), icon: '🏃', intensity: t('mạnh'), ventilation: 3.0 },
+  { id: 'cycle', label: t('Đạp xe'), short: t('Đạp xe'), icon: '🚲', intensity: t('vừa'), ventilation: 1.6 },
+  { id: 'walk', label: t('Đi bộ, đưa đón con'), short: t('Đi bộ / đưa đón con'), icon: '🚶', intensity: t('nhẹ–vừa'), ventilation: 1.0 },
+  { id: 'moto', label: t('Di chuyển bằng xe máy'), short: t('Đi xe máy'), icon: '🛵', intensity: t('nhẹ'), ventilation: 0.7 },
+  { id: 'work', label: t('Làm việc ngoài trời (giao hàng, xây dựng…)'), short: t('Làm việc ngoài trời'), icon: '📦', intensity: t('vừa'), ventilation: 1.6 },
 ];
 
 export const DURATIONS = [0.5, 1, 2, 4, 8];
@@ -132,9 +133,9 @@ export function dailyMean(series, dateStr) {
 
 // Ngưỡng trùng với mốc VN_AQI: ≤ 25 µg/m³ là mức Tốt, ≤ 50 µg/m³ là mức Trung bình.
 export const VENT_STATUSES = [
-  { id: 'open', max: 25, label: 'Mở thoải mái', icon: '🪟' },
-  { id: 'brief', max: 50, label: 'Chỉ mở ngắn 10–15 phút', icon: '⏱️' },
-  { id: 'closed', max: Infinity, label: 'Đóng kín, bật máy lọc', icon: '🚪' },
+  { id: 'open', max: 25, label: t('Mở thoải mái'), icon: '🪟' },
+  { id: 'brief', max: 50, label: t('Chỉ mở ngắn 10–15 phút'), icon: '⏱️' },
+  { id: 'closed', max: Infinity, label: t('Đóng kín, bật máy lọc'), icon: '🚪' },
 ];
 
 export function ventStatus(pm25) {
@@ -167,8 +168,8 @@ export function ventilationPlan(series, hours = 24) {
 
 export const ORG_PRESETS = {
   school: {
-    label: 'Trường học',
-    audience: 'học sinh',
+    label: t('Trường học'),
+    audience: t('học sinh'),
     slots: [
       { name: 'Thể dục buổi sáng', from: '07:00', to: '07:45' },
       { name: 'Giờ ra chơi', from: '09:30', to: '10:00' },
@@ -176,8 +177,8 @@ export const ORG_PRESETS = {
     ],
   },
   business: {
-    label: 'Doanh nghiệp',
-    audience: 'người lao động ngoài trời',
+    label: t('Doanh nghiệp'),
+    audience: t('người lao động ngoài trời'),
     slots: [
       { name: 'Ca giao hàng sáng', from: '07:00', to: '11:00' },
       { name: 'Ca giao hàng chiều', from: '13:00', to: '17:00' },
@@ -188,20 +189,20 @@ export const ORG_PRESETS = {
 
 const ORG_VERDICTS = {
   school: {
-    good: { status: 'ok', text: 'Tổ chức bình thường' },
-    moderate: { status: 'ok', text: 'Tổ chức được, để ý học sinh có bệnh hô hấp' },
-    poor: { status: 'caution', text: 'Rút ngắn, giảm vận động mạnh; học sinh nhạy cảm ở trong lớp' },
-    unhealthy: { status: 'stop', text: 'Chuyển hoạt động vào trong nhà' },
-    'very-unhealthy': { status: 'stop', text: 'Hủy hoạt động ngoài trời, đóng cửa sổ, bật máy lọc' },
-    hazardous: { status: 'stop', text: 'Hủy hoạt động ngoài trời, đóng kín cửa, bật máy lọc' },
+    good: { status: 'ok', text: t('Tổ chức bình thường') },
+    moderate: { status: 'ok', text: t('Tổ chức được, để ý học sinh có bệnh hô hấp') },
+    poor: { status: 'caution', text: t('Rút ngắn, giảm vận động mạnh; học sinh nhạy cảm ở trong lớp') },
+    unhealthy: { status: 'stop', text: t('Chuyển hoạt động vào trong nhà') },
+    'very-unhealthy': { status: 'stop', text: t('Hủy hoạt động ngoài trời, đóng cửa sổ, bật máy lọc') },
+    hazardous: { status: 'stop', text: t('Hủy hoạt động ngoài trời, đóng kín cửa, bật máy lọc') },
   },
   business: {
-    good: { status: 'ok', text: 'Làm việc bình thường' },
-    moderate: { status: 'ok', text: 'Làm việc bình thường, chú ý nhân viên có bệnh hô hấp' },
-    poor: { status: 'caution', text: 'Phát khẩu trang đạt chuẩn, cho nghỉ giữa ca trong nhà' },
-    unhealthy: { status: 'caution', text: 'Bắt buộc khẩu trang N95/KN95, giảm khối lượng, xoay ca' },
-    'very-unhealthy': { status: 'stop', text: 'Hoãn hoặc giảm tối đa việc ngoài trời' },
-    hazardous: { status: 'stop', text: 'Tạm dừng việc ngoài trời' },
+    good: { status: 'ok', text: t('Làm việc bình thường') },
+    moderate: { status: 'ok', text: t('Làm việc bình thường, chú ý nhân viên có bệnh hô hấp') },
+    poor: { status: 'caution', text: t('Phát khẩu trang đạt chuẩn, cho nghỉ giữa ca trong nhà') },
+    unhealthy: { status: 'caution', text: t('Bắt buộc khẩu trang N95/KN95, giảm khối lượng, xoay ca') },
+    'very-unhealthy': { status: 'stop', text: t('Hoãn hoặc giảm tối đa việc ngoài trời') },
+    hazardous: { status: 'stop', text: t('Tạm dừng việc ngoài trời') },
   },
 };
 

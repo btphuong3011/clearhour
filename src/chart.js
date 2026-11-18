@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { aqiFromConcentration, levelForAqi } from './aqi.js';
 import { num } from './format.js';
 import { datePart, hourOf, shortDate, weekday } from './time.js';
@@ -54,7 +55,7 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     height: HEIGHT,
     viewBox: `0 0 ${width} ${HEIGHT}`,
     role: 'img',
-    'aria-label': `Biểu đồ nồng độ PM2.5 theo giờ, ${n} giờ, cao nhất ${num(Math.max(...values))} µg/m³`,
+    'aria-label': t`Biểu đồ nồng độ PM2.5 theo giờ, ${n} giờ, cao nhất ${num(Math.max(...values))} µg/m³`,
   });
 
   // Lưới ngang mảnh
@@ -136,7 +137,7 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     root.append(svg('rect', {
       x: sx + 1, y: MARGIN.top, width: sw - 2, height: plotH, fill: 'none',
       stroke: 'var(--accent)', 'stroke-width': 2.5, rx: 4,
-      'aria-label': 'Khung đã chọn',
+      'aria-label': t('Khung đã chọn'),
     }));
   }
 
@@ -145,7 +146,7 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     const nx = x(series.nowIndex);
     root.append(svg('line', { x1: nx, x2: nx, y1: MARGIN.top - 2, y2: MARGIN.top + plotH, stroke: 'var(--accent)', 'stroke-width': 2 }));
     const roomLeft = nx - MARGIN.left > 56;
-    root.append(svg('text', { x: nx + (roomLeft ? -5 : 5), y: MARGIN.top + 10, 'text-anchor': roomLeft ? 'end' : 'start', class: 't-now' }, 'Bây giờ'));
+    root.append(svg('text', { x: nx + (roomLeft ? -5 : 5), y: MARGIN.top + 10, 'text-anchor': roomLeft ? 'end' : 'start', class: 't-now' }, t('Bây giờ')));
   }
 
   // Lớp bắt chuột: mỗi giờ là một vùng cao bằng cả biểu đồ
@@ -170,7 +171,7 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
       tip.replaceChildren();
       const head = document.createElement('div');
       head.className = 'muted';
-      head.textContent = `${weekday(datePart(t))} ${shortDate(datePart(t))} · ${t.slice(11, 16)}${i < series.nowIndex ? ' (đã qua)' : ''}`;
+      head.textContent = `${weekday(datePart(t))} ${shortDate(datePart(t))} · ${t.slice(11, 16)}${i < series.nowIndex ? t(' (đã qua)') : ''}`;
       const val = document.createElement('div');
       const strong = document.createElement('strong');
       strong.textContent = num(v);

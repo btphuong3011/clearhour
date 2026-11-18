@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Câu chuyện "Một buổi sáng của Minh": kể lại cách dùng ClearHour bằng dự báo thật của ngày mai.
 // Kết thúc thay đổi theo dữ liệu: có hôm nên dời giờ, có hôm cứ giữ giờ cũ.
 
@@ -14,12 +15,12 @@ export const STORY_FREE = [
 
 // Tả bầu trời bằng lời theo mức chất lượng không khí
 const SKY_WORDS = {
-  good: 'trời khá trong',
-  moderate: 'trời hơi đục',
-  poor: 'trời mù bụi',
-  unhealthy: 'bụi dày, nhìn xa đã thấy mờ',
-  'very-unhealthy': 'bụi rất dày',
-  hazardous: 'bụi ở mức nguy hại',
+  good: t('trời khá trong'),
+  moderate: t('trời hơi đục'),
+  poor: t('trời mù bụi'),
+  unhealthy: t('bụi dày, nhìn xa đã thấy mờ'),
+  'very-unhealthy': t('bụi rất dày'),
+  hazardous: t('bụi ở mức nguy hại'),
 };
 
 /** Diễn biến câu chuyện: giờ quen của Minh, lúc ít bụi nhất trong giờ rảnh, nên dời hay giữ. */
@@ -42,12 +43,12 @@ export function storySlides(series, story, { place }) {
   const planTime = friendlyClock(STORY_PLAN_HOUR);
   const plan = { hour: STORY_PLAN_HOUR, pm25: story.plan.mean };
   const slides = [
-    { art: 'scene', ...plan, text: `Sáng mai, Minh định chạy bộ quanh hồ lúc ${planTime} như mọi khi.` },
+    { art: 'scene', ...plan, text: t`Sáng mai, Minh định chạy bộ quanh hồ lúc ${planTime} như mọi khi.` },
     {
       art: 'scene',
       ...plan,
       bubble: MOOD[planLevel.id],
-      text: `Dự báo cho ${place}: lúc ${planTime} không khí ở mức «${planLevel.label}», ${SKY_WORDS[planLevel.id]}.`,
+      text: t`Dự báo cho ${place}: lúc ${planTime} không khí ở mức «${planLevel.label}», ${SKY_WORDS[planLevel.id]}.`,
     },
     {
       art: 'strip',
@@ -55,7 +56,7 @@ export function storySlides(series, story, { place }) {
         .map((t, i) => ({ t, i }))
         .filter(({ t }) => datePart(t) === story.day)
         .map(({ t, i }) => ({ hour: hourOf(t), level: levelForPm25(series.pm25[i]), free: STORY_FREE.some((r) => hourOf(t) >= r.from && hourOf(t) < r.to) })),
-      text: 'Minh mở ClearHour và chọn những lúc mình rảnh: 5–7 giờ sáng và 5–9 giờ tối.',
+      text: t('Minh mở ClearHour và chọn những lúc mình rảnh: 5–7 giờ sáng và 5–9 giờ tối.'),
     },
   ];
 
@@ -68,14 +69,14 @@ export function storySlides(series, story, { place }) {
         from: plan,
         to: { hour: topHour, pm25: story.top.mean },
         labels: [planTime, friendlyClock(topHour)],
-        text: `ClearHour gợi ý dời sang ${friendlyClock(topHour)}: bụi mịn dự báo ít hơn khoảng ${story.cmp.pct}%.`,
+        text: t`ClearHour gợi ý dời sang ${friendlyClock(topHour)}: bụi mịn dự báo ít hơn khoảng ${story.cmp.pct}%.`,
       },
       {
         art: 'scene',
         hour: topHour,
         pm25: story.top.mean,
-        bubble: topLevel.id === 'good' ? 'Hẹn cả nhóm nhé!' : MOOD[topLevel.id],
-        text: `Minh thêm ${friendlyClock(topHour)} vào lịch và rủ cả nhóm chạy cùng. Còn bạn, định ra ngoài lúc nào?`,
+        bubble: topLevel.id === 'good' ? t('Hẹn cả nhóm nhé!') : MOOD[topLevel.id],
+        text: t`Minh thêm ${friendlyClock(topHour)} vào lịch và rủ cả nhóm chạy cùng. Còn bạn, định ra ngoài lúc nào?`,
         cta: true,
       },
     );
@@ -84,16 +85,16 @@ export function storySlides(series, story, { place }) {
       {
         art: 'scene',
         ...plan,
-        bubble: 'Giữ giờ cũ thôi!',
+        bubble: t('Giữ giờ cũ thôi!'),
         text: story.top
-          ? `Hóa ra ${planTime} đã gần như là lúc ít bụi nhất trong những giờ Minh rảnh. Đổi giờ cũng không đỡ được bao nhiêu.`
-          : `Trong những giờ Minh rảnh, không có lúc nào ít bụi hơn ${planTime}.`,
+          ? t`Hóa ra ${planTime} đã gần như là lúc ít bụi nhất trong những giờ Minh rảnh. Đổi giờ cũng không đỡ được bao nhiêu.`
+          : t`Trong những giờ Minh rảnh, không có lúc nào ít bụi hơn ${planTime}.`,
       },
       {
         art: 'scene',
         ...plan,
-        bubble: LEVELS.indexOf(planLevel) >= 3 ? MOOD[planLevel.id] : 'Đi thôi!',
-        text: 'Minh cứ đi như thường, yên tâm vì đã kiểm tra trước. Còn bạn, định ra ngoài lúc nào?',
+        bubble: LEVELS.indexOf(planLevel) >= 3 ? MOOD[planLevel.id] : t('Đi thôi!'),
+        text: t('Minh cứ đi như thường, yên tâm vì đã kiểm tra trước. Còn bạn, định ra ngoài lúc nào?'),
         cta: true,
       },
     );
@@ -121,14 +122,14 @@ function artFor(slide, figure, k) {
     return h(
       'div',
       { class: 'story__phone' },
-      h('p', { class: 'story__phone-title' }, 'ClearHour · Ngày mai'),
+      h('p', { class: 'story__phone-title' }, t('ClearHour · Ngày mai')),
       h(
         'div',
-        { class: 'story__strip', role: 'img', 'aria-label': 'Mức bụi từng giờ ngày mai, các giờ Minh rảnh được làm nổi bật' },
+        { class: 'story__strip', role: 'img', 'aria-label': t('Mức bụi từng giờ ngày mai, các giờ Minh rảnh được làm nổi bật') },
         ...slide.hours.map((x) => h('span', { class: x.free ? 'is-free' : null, style: { background: x.level?.display ?? '#ccc' } })),
       ),
       h('div', { class: 'story__strip-axis' }, h('span', {}, '0h'), h('span', {}, '6h'), h('span', {}, '12h'), h('span', {}, '18h'), h('span', {}, '23h')),
-      h('p', { class: 'story__phone-note' }, 'Ô đậm là giờ Minh rảnh'),
+      h('p', { class: 'story__phone-note' }, t('Ô đậm là giờ Minh rảnh')),
     );
   }
   if (slide.art === 'compare') {
@@ -175,15 +176,15 @@ export function openStory({ series, place, sample, figure = '🏃', onFinish }) 
   const art = h('div', { class: 'story__art' });
   const step = h('p', { class: 'story__step' });
   const text = h('h2', { class: 'story__text', id: 'story-text', 'aria-live': 'polite' });
-  const back = h('button', { type: 'button', class: 'btn btn--ghost', onclick: () => go(k - 1) }, '← Quay lại');
+  const back = h('button', { type: 'button', class: 'btn btn--ghost', onclick: () => go(k - 1) }, t('← Quay lại'));
   const next = h('button', { type: 'button', class: 'btn' });
   const dots = h('div', { class: 'story__dots', 'aria-hidden': 'true' }, ...slides.map(() => h('span')));
   const note = h(
     'p',
     { class: 'story__note' },
     sample
-      ? 'Câu chuyện đang dùng dữ liệu mẫu của Hà Nội.'
-      : `Câu chuyện dùng dự báo thật của ${place} cho ngày mai, nên mỗi ngày một khác.`,
+      ? t('Câu chuyện đang dùng dữ liệu mẫu của Hà Nội.')
+      : t`Câu chuyện dùng dự báo thật của ${place} cho ngày mai, nên mỗi ngày một khác.`,
   );
   const close = () => {
     document.removeEventListener('keydown', onKey);
@@ -201,7 +202,7 @@ export function openStory({ series, place, sample, figure = '🏃', onFinish }) 
     h(
       'div',
       { class: 'story__panel' },
-      h('button', { type: 'button', class: 'story__close', 'aria-label': 'Đóng câu chuyện', onclick: close }, '✕'),
+      h('button', { type: 'button', class: 'story__close', 'aria-label': t('Đóng câu chuyện'), onclick: close }, '✕'),
       art,
       h('div', { class: 'story__body' }, step, text, h('div', { class: 'story__nav' }, back, dots, next), note),
     ),
@@ -212,10 +213,10 @@ export function openStory({ series, place, sample, figure = '🏃', onFinish }) 
     k = n;
     const s = slides[k];
     art.replaceChildren(artFor(s, figure, k));
-    step.textContent = `Minh và buổi chạy sáng mai · ${k + 1}/${slides.length}`;
+    step.textContent = t`Minh và buổi chạy sáng mai · ${k + 1}/${slides.length}`;
     text.textContent = s.text;
     back.disabled = k === 0;
-    next.textContent = s.cta ? 'Thử với lịch của bạn' : 'Tiếp →';
+    next.textContent = s.cta ? t('Thử với lịch của bạn') : t('Tiếp →');
     next.onclick = s.cta ? finish : () => go(k + 1);
     [...dots.children].forEach((d, i) => d.classList.toggle('is-on', i === k));
     next.focus();

@@ -1,5 +1,7 @@
-const nf1 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
-const nf0 = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
+import { locale } from './i18n.js';
+
+const nf1 = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+const nf0 = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
 
 export const num = (v) => (v == null ? '–' : nf1.format(v));
 export const int = (v) => (v == null ? '–' : nf0.format(v));

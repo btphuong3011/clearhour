@@ -1,7 +1,8 @@
+import { language, t } from './i18n.js';
 // Open-Meteo trả về giờ địa phương dạng "YYYY-MM-DDTHH:MM" (không kèm múi giờ).
 // Xử lý thẳng trên chuỗi để không bị lệch múi giờ theo máy người xem.
 
-const WEEKDAYS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+const WEEKDAYS = [t('Chủ nhật'), t('Thứ Hai'), t('Thứ Ba'), t('Thứ Tư'), t('Thứ Năm'), t('Thứ Sáu'), t('Thứ Bảy')];
 
 export const datePart = (t) => t.slice(0, 10);
 export const hourOf = (t) => Number(t.slice(11, 13));
@@ -11,14 +12,16 @@ export function weekday(dateStr) {
   return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
 }
 
-export function shortDate(dateStr) {
-  const [, m, d] = dateStr.split('-');
-  return `${d}/${m}`;
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export function shortDate(dateStr, withYear = false) {
+  const [y, m, d] = dateStr.split('-');
+  if (language === 'en') return `${Number(d)} ${months[Number(m) - 1]}${withYear ? ' ' + y : ''}`;
+  return `${d}/${m}${withYear ? '/' + y : ''}`;
 }
 
 export function dayLabel(dateStr, todayStr) {
-  if (dateStr === todayStr) return 'Hôm nay';
-  if (dateStr === addDays(todayStr, 1)) return 'Ngày mai';
+  if (dateStr === todayStr) return t('Hôm nay');
+  if (dateStr === addDays(todayStr, 1)) return t('Ngày mai');
   return weekday(dateStr);
 }
 
@@ -56,5 +59,6 @@ export function friendlyClock(hours) {
   const h = Math.floor(hours) % 24;
   const m = Math.round((hours - Math.floor(hours)) * 60);
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  if (language === 'en') return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
   return `${h12}:${String(m).padStart(2, '0')} ${dayPeriod(h)}`;
 }
