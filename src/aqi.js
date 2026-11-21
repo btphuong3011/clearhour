@@ -1,6 +1,6 @@
 import { t } from './i18n.js';
 // Chỉ số chất lượng không khí Việt Nam (VN_AQI) theo Quyết định 1459/QĐ-TCMT (12/11/2019)
-// của Tổng cục Môi trường. Bảng 2: giá trị BPi (µg/m³) cho PM2.5 và PM10.
+// của Tổng cục Môi trường. Bảng 2: giá trị BPi (µg/m³) cho PM2.5, PM10 và O3 trung bình 1 giờ.
 
 const BREAKPOINTS = {
   pm2_5: [
@@ -22,6 +22,17 @@ const BREAKPOINTS = {
     [420, 300],
     [500, 400],
     [600, 500],
+  ],
+  // AQI giờ của O3 dùng giá trị trung bình 1 giờ (ghi chú dưới Bảng 2)
+  o3_1h: [
+    [0, 0],
+    [160, 50],
+    [200, 100],
+    [300, 150],
+    [400, 200],
+    [800, 300],
+    [1000, 400],
+    [1200, 500],
   ],
 };
 
@@ -155,8 +166,8 @@ export function levelForPm25(c) {
 }
 
 /** VN_AQI cuối cùng là giá trị lớn nhất trong các AQI thành phần. */
-export function combinedAqi({ pm2_5, pm10 }) {
-  const parts = [aqiFromConcentration(pm2_5, 'pm2_5'), aqiFromConcentration(pm10, 'pm10')].filter(
+export function combinedAqi({ pm2_5, pm10, o3 }) {
+  const parts = [aqiFromConcentration(pm2_5, 'pm2_5'), aqiFromConcentration(pm10, 'pm10'), aqiFromConcentration(o3, 'o3_1h')].filter(
     (v) => v != null,
   );
   return parts.length ? Math.max(...parts) : null;

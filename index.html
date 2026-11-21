@@ -183,6 +183,10 @@
                       <dt><span data-en="PM2.5 this hour">PM2.5 giờ này</span> <small class="sub" data-en="model estimate">theo mô hình</small></dt>
                       <dd><span id="now-pm25">–</span> <small>µg/m³</small></dd>
                     </div>
+                    <div id="o3-row" hidden>
+                      <dt><span data-en="Ozone (O₃) this hour">Ozone (O₃) giờ này</span> <small class="sub" data-en="model estimate">theo mô hình</small></dt>
+                      <dd><span id="now-o3">–</span> <small>µg/m³</small></dd>
+                    </div>
                     <div id="station-row" hidden>
                       <dt><span data-en="Nearest monitoring station">Trạm đo gần nhất</span> <small class="sub" id="station-meta"></small></dt>
                       <dd id="station-val">–</dd>
@@ -296,6 +300,10 @@
               </details>
             </div>
           </div>
+          <details class="more org-history" id="org-history" hidden>
+            <summary data-en="Looking back 30 days: which hours are usually clean?">Nhìn lại 30 ngày: giờ nào thường sạch?</summary>
+            <div id="org-history-body"></div>
+          </details>
         </section>
 
         <section id="du-an" class="about" aria-labelledby="about-title">
@@ -312,6 +320,9 @@
             <article class="card">
               <h3 data-en="How local is the forecast?">Dự báo chi tiết đến đâu?</h3>
               <p data-en="CAMS uses a grid of about 45 km. Levels near busy roads can differ. When a nearby station has a reading, ClearHour shows when it was taken so you can compare it with the model.">Mô hình CAMS có ô lưới khoảng 45 km. Mức bụi gần đường đông xe có thể khác. Khi có số đo từ trạm gần nhất, ứng dụng hiện giờ đo để bạn đối chiếu với mô hình.</p>
+            </article>
+            <article class="card accuracy" id="accuracy-card" aria-live="polite">
+              <h3 data-en="How accurate is the forecast?">Dự báo đúng đến đâu?</h3>
             </article>
           </div>
         </section>

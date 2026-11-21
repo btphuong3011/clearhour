@@ -78,23 +78,26 @@ export function candidateStarts(series, { scope = 'today', fromHour = 5, toHour 
 /**
  * Tìm `count` khung giờ có nồng độ PM2.5 trung bình thấp nhất, kèm khung tệ nhất để so sánh.
  * Các khung gợi ý cách nhau ít nhất 2 giờ để người dùng có những lựa chọn thật sự khác nhau.
+ * opts.exclude(w): bỏ qua khung không nên đề xuất (mưa, nắng nóng gay gắt…), trừ khi không còn khung nào khác.
  */
 export function findBestWindows(series, opts, count = 3) {
   const ventilation = opts.ventilation ?? 1;
   const all = candidateStarts(series, opts)
     .map((i) => windowStats(series.pm25, i, opts.hours, ventilation))
     .filter(Boolean);
-  if (!all.length) return { best: [], worst: null, all };
+  if (!all.length) return { best: [], worst: null, all, excluded: 0 };
 
-  const sorted = [...all].sort((a, b) => a.mean - b.mean || a.start - b.start);
+  const pool = opts.exclude ? all.filter((w) => !opts.exclude(w)) : all;
+  const excluded = pool.length ? all.length - pool.length : 0;
+  const sorted = [...(pool.length ? pool : all)].sort((a, b) => a.mean - b.mean || a.start - b.start);
   const gap = Math.ceil(opts.hours) + 2;
   const best = [];
   for (const w of sorted) {
     if (best.every((b) => Math.abs(w.start - b.start) >= gap)) best.push(w);
     if (best.length === count) break;
   }
-  const worst = sorted[sorted.length - 1];
-  return { best, worst, all };
+  const worst = all.reduce((a, b) => (b.mean > a.mean ? b : a));
+  return { best, worst, all, excluded };
 }
 
 // Hai khung chênh nhau dưới 10% hoặc dưới 3 µg/m³ thì coi như tương đương: mức chênh đó nhỏ hơn
@@ -214,15 +217,20 @@ export function evaluateSlot(series, dateStr, slot, orgType = 'school') {
   const from = Math.floor(parseClock(slot.from));
   const to = Math.ceil(parseClock(slot.to));
   const vals = [];
+  const o3 = [];
   series.times.forEach((t, i) => {
     if (datePart(t) !== dateStr) return;
     const h = hourOf(t);
-    if (h >= from && h < Math.max(to, from + 1) && series.pm25[i] != null) vals.push(series.pm25[i]);
+    if (h >= from && h < Math.max(to, from + 1) && series.pm25[i] != null) {
+      vals.push(series.pm25[i]);
+      if (series.o3?.[i] != null) o3.push(series.o3[i]);
+    }
   });
   if (!vals.length) return null;
   const peak = Math.max(...vals);
   const mean = vals.reduce((sum, v) => sum + v, 0) / vals.length;
-  const aqi = aqiFromConcentration(peak, 'pm2_5');
+  // VN_AQI lấy giá trị lớn nhất giữa các chất; O3 thường lên cao vào buổi trưa nắng
+  const aqi = Math.max(aqiFromConcentration(peak, 'pm2_5'), o3.length ? aqiFromConcentration(Math.max(...o3), 'o3_1h') : 0);
   const level = levelForAqi(aqi);
   return { peak, mean, aqi, level, ...ORG_VERDICTS[orgType][level.id] };
 }

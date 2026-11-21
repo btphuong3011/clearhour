@@ -1,6 +1,6 @@
-# Chạy test, lấy số đo trạm mới nhất từ OpenAQ rồi đưa trang lên GitHub Pages.
+# Chạy test, lấy số đo trạm mới nhất từ OpenAQ, kiểm tra độ chính xác dự báo rồi đưa trang lên GitHub Pages.
 # Chạy mỗi khi đẩy code lên main và mỗi giờ một lần để cập nhật data/stations.json
-# (không tạo commit mới, dữ liệu chỉ nằm trong bản deploy).
+# và data/accuracy.json (không tạo commit mới, dữ liệu chỉ nằm trong bản deploy).
 
 name: Deploy ClearHour
 
@@ -41,6 +41,12 @@ jobs:
         run: node scripts/fetch-stations.mjs data/stations.json
         env:
           OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+
+      # So dự báo với số đo trạm trong 60 ngày qua (kho lưu trữ công khai của OpenAQ, không cần key).
+      # Bản trên web còn mới dưới 20 giờ thì dùng lại, lỗi thì vẫn deploy với tệp rỗng.
+      - name: Kiểm tra độ chính xác dự báo
+        run: node scripts/accuracy.mjs data/stations.json data/accuracy.json --reuse https://btphuong3011.github.io/clearhour/data/accuracy.json
+        continue-on-error: true
 
       - uses: actions/configure-pages@v6
 

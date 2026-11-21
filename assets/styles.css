@@ -901,6 +901,34 @@ main.is-loading .card {
   font-size: 14px;
   font-weight: 600;
 }
+.cond {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.cond__chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.cond__chip--avoid {
+  background: color-mix(in srgb, var(--caution) 18%, var(--surface));
+  color: var(--ink);
+}
+.cond-tips {
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--caution) 10%, var(--surface));
+  font-size: 14px;
+}
 .duel__arrow {
   align-self: center;
   font-size: 20px;
@@ -1343,6 +1371,109 @@ pre {
 }
 .about__grid .card {
   margin: 0;
+}
+.about__grid .accuracy {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Nhìn lại 30 ngày ---------- */
+.lookback {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 14px;
+}
+.lookback__icon {
+  flex: none;
+  font-size: 18px;
+  line-height: 1.2;
+}
+.lookback small {
+  display: block;
+  margin-top: 2px;
+}
+.org-history {
+  margin-top: 18px;
+}
+.org-history > summary {
+  font-weight: 600;
+}
+.org-history__best {
+  margin: 12px 0;
+  font-size: 15px;
+}
+.slot-hist {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.slot-hist li {
+  display: grid;
+  gap: 3px;
+}
+.slot-hist__name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.slot-hist__bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.slot-hist__text {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.heat {
+  display: grid;
+  grid-template-columns: 44px repeat(17, minmax(0, 1fr));
+  gap: 2px;
+  margin: 8px 0;
+  max-width: 640px;
+}
+.heat__cell {
+  height: 10px;
+  border-radius: 2px;
+}
+.heat__day,
+.heat__hour {
+  font-size: 11px;
+  line-height: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.heat__hour {
+  line-height: 1.4;
+}
+.heat__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.heat__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.heat__legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.accuracy__list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
 }
 .about p + p {
   margin-top: 10px;

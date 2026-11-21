@@ -1,8 +1,10 @@
 import { localized, language, localizeShell, localizedHref, t } from './i18n.js';
+import { accuracyNear, correctSeries, correctValues, fetchAccuracy, testDays } from './accuracy.js';
 import { aqiFromConcentration, cigarettesPerDay, combinedAqi, LEVELS, levelForAqi, levelForPm25, nowcast, WHO_PM25_24H } from './aqi.js';
-import { fetchAirQuality, fetchSample } from './api.js';
+import { fetchAirQuality, fetchHistory, fetchSample } from './api.js';
 import { downloadIcs, googleCalendarUrl, localToUtc } from './calendar.js';
 import { renderChart } from './chart.js';
+import { hasAvoid, withConditions } from './conditions.js';
 import { CITIES } from './cities.js';
 import { el, int, num } from './format.js';
 import {
@@ -23,7 +25,8 @@ import {
   windowStats,
 } from './planner.js';
 import { buildStory, openStory } from './story.js';
-import { ageText, compareWithModel, fetchStations, nearestStation, toLocalTime } from './stations.js';
+import { cleanGrid, cleanestHour, lookBack, slotHistory } from './history.js';
+import { ageText, compareWithModel, fetchStations, haversineKm, nearestStation, toLocalTime } from './stations.js';
 import { addDays, datePart, dayLabel, formatClock, friendlyClock, hourOf, parseClock, shortDate, weekday } from './time.js';
 
 const $ = (id) => document.getElementById(id);
@@ -123,7 +126,13 @@ const state = {
     school: structuredClone(ORG_PRESETS.school.slots),
     business: structuredClone(ORG_PRESETS.business.slots),
   },
-  series: null,
+  series: null, // bản đang hiển thị (đã hiệu chỉnh theo trạm nếu có)
+  rawSeries: null, // dự báo gốc của mô hình
+  accuracy: null, // kết quả kiểm tra dự báo so với trạm đo
+  useCorrection: true,
+  history: null, // dữ liệu từng giờ của khoảng 30 ngày qua (bản gốc)
+  historyView: null, // bản đã hiệu chỉnh theo trạm nếu có
+  historyKey: null,
   stations: [],
   // Kết quả tính của lần render gần nhất, dùng chung cho biểu đồ
   best: [],
@@ -357,6 +366,7 @@ async function load() {
     if (version !== loadVersion) return;
     main.classList.remove('is-loading');
     state.series = null;
+    state.rawSeries = null;
     $('scene-source').textContent = t('Không có dữ liệu');
     banner.textContent = t('Không tải được dữ liệu. Hãy thử tải lại trang.');
     banner.hidden = false;
@@ -364,7 +374,10 @@ async function load() {
   }
   if (version !== loadVersion) return;
 
-  state.series = series;
+  state.rawSeries = series;
+  if (series.source === 'sample') Object.assign(state, { history: null, historyKey: null });
+  else loadHistory();
+  deriveSeries();
   state.sceneDate = null;
   state.planned = null;
   state.selected = null;
@@ -398,6 +411,65 @@ async function load() {
   }
   main.classList.remove('is-loading');
   renderAll();
+}
+
+/** Trạm đã kiểm tra dự báo gần nơi đang xem (không dùng cho dữ liệu mẫu). */
+function accuracyEntry() {
+  if (!state.accuracy || state.rawSeries?.source === 'sample') return null;
+  const p = place();
+  return accuracyNear(state.accuracy, p.lat, p.lon);
+}
+
+/** Bản dự báo để hiển thị: đã hiệu chỉnh theo trạm (nếu có và người dùng không tắt) hoặc bản gốc. */
+function deriveSeries() {
+  if (!state.rawSeries) return;
+  const entry = state.useCorrection ? accuracyEntry() : null;
+  state.series = correctSeries(state.rawSeries, entry);
+  const h = state.history;
+  state.historyView = h && entry?.apply && entry.factors
+    ? { ...h, pm25: correctValues(h.times, h.pm25, entry.factors, h.utcOffsetSeconds) }
+    : h;
+}
+
+/** Tải dữ liệu 30 ngày qua của nơi đang xem (chạy nền, không chặn phần dự báo). */
+function loadHistory() {
+  const p = place();
+  const k = `${p.lat.toFixed(2)},${p.lon.toFixed(2)}`;
+  if (state.historyKey === k) return;
+  Object.assign(state, { history: null, historyView: null, historyKey: k });
+  fetchHistory(p.lat, p.lon)
+    .then((h) => {
+      if (state.historyKey !== k) return;
+      state.history = h;
+      deriveSeries();
+      renderAll();
+    })
+    .catch(() => {});
+}
+
+/** Một câu nhìn lại 30 ngày cho phần cá nhân. */
+function lookBackNote(mine) {
+  const h = state.historyView;
+  if (!h || isSample()) return null;
+  const planHour = mine ? hourOf(state.series.times[mine.start]) : null;
+  const r = lookBack(h, { today: todayStr(), planHour, hours: state.hours, ranges: state.free });
+  if (!r) return null;
+  let text;
+  if (planHour == null && r.usualCount * 2 >= r.days) {
+    text = t`Nhìn lại ${r.days} ngày qua: trong những giờ bạn rảnh, lúc ít bụi nhất thường là ${friendlyClock(r.usualHour)} (${r.usualCount}/${r.days} ngày).`;
+  } else if (planHour == null) {
+    text = t`Nhìn lại ${r.days} ngày qua: lúc ít bụi nhất trong những giờ bạn rảnh đổi theo từng ngày, hay gặp nhất là ${friendlyClock(r.usualHour)} (chỉ ${r.usualCount}/${r.days} ngày). Vì vậy nên xem dự báo mỗi ngày.`;
+  } else if (r.worth && r.pct > 0) {
+    text = t`Nhìn lại ${r.days} ngày qua: nếu hôm nào cũng làm theo gợi ý đổi giờ thay vì luôn đi lúc ${friendlyClock(planHour)}, bạn sẽ hít ít bụi mịn hơn khoảng ${r.pct}%. Có ${r.worth}/${r.days} ngày đáng đổi giờ.`;
+  } else {
+    text = t`Nhìn lại ${r.days} ngày qua: ${friendlyClock(planHour)} hầu như luôn là lúc ít bụi trong những giờ bạn rảnh, không cần đổi giờ.`;
+  }
+  return el(
+    'p',
+    { class: 'lookback' },
+    el('span', { class: 'lookback__icon', 'aria-hidden': 'true' }, '📅'),
+    el('span', {}, text, ' ', el('small', { class: 'muted' }, t('Tính trên dữ liệu đã xảy ra, tức mức tốt nhất khi dự báo luôn đúng.'))),
+  );
 }
 
 function renderSharedPlan() {
@@ -465,7 +537,83 @@ function renderAll() {
   renderVentilation();
   $('story-promo').hidden = !buildStory(state.series);
   renderOrg();
+  renderAccuracy();
   syncUrl();
+}
+
+/** Thẻ "Dự báo đúng đến đâu?": kết quả kiểm tra dự báo so với trạm đo gần nơi đang xem. */
+function renderAccuracy() {
+  const box = $('accuracy-card');
+  const title = el('h3', {}, t('Dự báo đúng đến đâu?'));
+  const entry = accuracyEntry();
+  if (!entry) {
+    const cities = [...new Set((state.accuracy?.stations ?? [])
+      .filter((s) => s.test)
+      .map((s) => CITIES.find((c) => haversineKm(c.lat, c.lon, s.lat, s.lon) <= 30))
+      .filter(Boolean)
+      .map((c) => t(c.name)))];
+    let text = t('Chưa có kết quả kiểm tra dự báo. Kết quả được tính lại mỗi ngày khi trang cập nhật.');
+    if (isSample()) text = t('Phần này cần dự báo trực tiếp nên không áp dụng cho dữ liệu mẫu.');
+    else if (cities.length) text = t`Quanh khu vực này (30 km) chưa có trạm đo đủ dữ liệu để kiểm tra dự báo. Hiện ClearHour kiểm tra được ở: ${cities.join(', ')}.`;
+    box.replaceChildren(title, el('p', {}, text));
+    return;
+  }
+  const r = entry.test;
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const fixed = entry.apply;
+  const higher = r.biasRaw < 0;
+  const items = [
+    fixed
+      ? t`Đoán đúng mức không khí (Tốt, Trung bình, Kém…) ở ${pct(r.levelRaw)} số giờ; sau hiệu chỉnh là ${pct(r.levelCorr)}.`
+      : t`Đoán đúng mức không khí (Tốt, Trung bình, Kém…) ở ${pct(r.levelRaw)} số giờ.`,
+    fixed
+      ? t`So hai giờ trong cùng ngày, dự báo chỉ ra đúng giờ nào ít bụi hơn ${pct(r.orderRaw)} số lần; sau hiệu chỉnh là ${pct(r.orderCorr)}.`
+      : t`So hai giờ trong cùng ngày, dự báo chỉ ra đúng giờ nào ít bụi hơn ${pct(r.orderRaw)} số lần.`,
+    (higher
+      ? t`Mô hình thường dự báo cao hơn số đo khoảng ${num(Math.abs(r.biasRaw))} µg/m³, mỗi giờ lệch trung bình ${num(r.maeRaw)} µg/m³`
+      : t`Mô hình thường dự báo thấp hơn số đo khoảng ${num(Math.abs(r.biasRaw))} µg/m³, mỗi giờ lệch trung bình ${num(r.maeRaw)} µg/m³`) +
+      (fixed ? t`; sau hiệu chỉnh còn ${num(r.maeCorr)} µg/m³.` : '.'),
+  ];
+  const verdict = fixed
+    ? t('ClearHour đang dùng bản hiệu chỉnh này cho khu vực của bạn.')
+    : entry.reason === 'low-cost'
+      ? t('Đây là cảm biến giá rẻ, độ chính xác có hạn, nên chỉ dùng để đối chiếu chứ không dùng để hiệu chỉnh.')
+      : t('Hiệu chỉnh không giúp dự báo tốt hơn rõ rệt nên ClearHour giữ nguyên dự báo gốc.');
+  box.replaceChildren(
+    title,
+    el('p', {}, entry.isMonitor
+      ? t`So với trạm đo ${entry.name} (cách ${num(entry.km)} km) trong ${testDays(r)} ngày gần nhất:`
+      : t`So với cảm biến ${entry.name} (cách ${num(entry.km)} km) trong ${testDays(r)} ngày gần nhất:`),
+    el('ul', { class: 'accuracy__list' }, ...items.map((x) => el('li', {}, x))),
+    el('p', {}, verdict),
+    el('p', { class: 'muted small' },
+      t`Cách kiểm tra: ghép ${int(entry.n)} giờ có cả số đo và dự báo trong khoảng 60 ngày qua. Phần 2/3 thời gian đầu dùng để tính hệ số hiệu chỉnh cho từng giờ trong ngày, 1/3 còn lại dùng để chấm điểm. Dữ liệu quá khứ của Open-Meteo là mô hình chạy sát giờ, không phải bản dự báo trước 1–3 ngày bạn đang xem, nên sai số thật có thể lớn hơn.`),
+  );
+}
+
+/** Dòng cho biết dự báo đang được hiệu chỉnh theo trạm nào, kèm nút xem bản gốc. */
+function correctionNote() {
+  const entry = accuracyEntry();
+  if (!entry?.apply) return null;
+  const on = Boolean(state.series.corrected);
+  return el(
+    'p',
+    { class: 'status status--ok' },
+    on
+      ? t`Dự báo đã được hiệu chỉnh theo trạm đo ${entry.name} (cách ${num(entry.km)} km) nên sát thực tế hơn. `
+      : t('Đang xem dự báo gốc của mô hình, chưa hiệu chỉnh. '),
+    el('button', {
+      type: 'button',
+      class: 'btn btn--ghost btn--xs',
+      onclick: () => {
+        state.useCorrection = !on;
+        deriveSeries();
+        renderAll();
+      },
+    }, on ? t('Xem dự báo gốc') : t('Dùng bản hiệu chỉnh')),
+    ' ',
+    el('a', { href: '#accuracy-card' }, t('Đúng đến đâu?')),
+  );
 }
 
 function renderMeta() {
@@ -526,8 +674,14 @@ function dataStatus(info) {
 function renderNow() {
   const s = state.series;
   const back = (arr) => Array.from({ length: 12 }, (_, k) => arr[s.nowIndex - k] ?? null);
-  const aqi = combinedAqi({ pm2_5: nowcast(back(s.pm25)), pm10: nowcast(back(s.pm10)) });
+  const pmAqi = combinedAqi({ pm2_5: nowcast(back(s.pm25)), pm10: nowcast(back(s.pm10)) });
+  // O3 tính theo trung bình 1 giờ, không dùng NowCast
+  const o3 = s.o3?.[s.nowIndex] ?? s.current.o3;
+  const o3Aqi = aqiFromConcentration(o3, 'o3_1h');
+  const aqi = combinedAqi({ pm2_5: nowcast(back(s.pm25)), pm10: nowcast(back(s.pm10)), o3 });
   const modelLevel = levelForAqi(aqi);
+  $('o3-row').hidden = o3 == null;
+  $('now-o3').textContent = num(o3);
   $('now-aqi').textContent = int(aqi);
   const pill = $('now-level');
   pill.textContent = modelLevel?.label ?? '–';
@@ -558,6 +712,7 @@ function renderNow() {
     el('strong', {}, `${profile.short}: `),
     level ? level.advice[profile.sensitive ? 'sensitive' : 'normal'] : '',
     stationWorse ? t` Lời khuyên này theo số đo trạm (mức ${info.level.label}), đang xấu hơn dự báo của mô hình.` : '',
+    !stationWorse && o3Aqi > pmAqi && o3Aqi > 50 ? t(' Chỉ số lúc này chủ yếu do ozone, chất thường tăng vào trưa nắng.') : '',
   );
 }
 
@@ -661,7 +816,11 @@ function renderPlanner() {
   radioGroup($('scopes'), SCOPES, state.scope, pickAndRender('scope'));
   renderFreeRanges();
 
-  const { best, worst } = findBestWindows(s, plannerOpts(), 3);
+  // Mỗi khung kèm cảnh báo mưa, nóng, UV, ozone; khung dễ mưa hay nóng gay gắt không được đề xuất
+  const cond = (w) => withConditions(s, w);
+  const found = findBestWindows(s, { ...plannerOpts(), exclude: (w) => hasAvoid(cond(w).flags) }, 3);
+  const best = found.best.map(cond);
+  const worst = cond(found.worst);
 
   // "Giờ bạn định đi" được chọn tự do trong các ngày đang xét, kể cả ngoài khoảng rảnh
   const choices = candidateStarts(s, { scope: state.scope, ranges: [{ from: 0, to: 24 }], hours: state.hours });
@@ -673,7 +832,7 @@ function renderPlanner() {
       return el('option', { value: i, selected: i === state.planned }, `${day} ${range}`);
     }),
   );
-  const mine = state.planned != null ? windowStats(s.pm25, state.planned, state.hours, act.ventilation) : null;
+  const mine = state.planned != null ? cond(windowStats(s.pm25, state.planned, state.hours, act.ventilation)) : null;
 
   // Đem ra so: giờ định đi và các khung đề xuất. Lúc rảnh nào nhiều bụi hơn hẳn giờ định đi thì không đề xuất.
   const others = best.filter((w) => !mine || w.start !== mine.start);
@@ -683,7 +842,7 @@ function renderPlanner() {
   const shouldSwitch = cmp?.relation === 'better';
   const options = [...(mine ? [mine] : []), ...suggestions];
   if (state.shared?.chosen && state.selected != null && !options.some((w) => w.start === state.selected)) {
-    const shared = windowStats(s.pm25, state.selected, state.hours, act.ventilation);
+    const shared = cond(windowStats(s.pm25, state.selected, state.hours, act.ventilation));
     if (shared) options.push(shared);
   }
   if (!options.some((w) => w.start === state.selected)) state.selected = null;
@@ -699,6 +858,18 @@ function renderPlanner() {
     if (chosen) out.push(verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers: others.length > 0 }));
     if (chosen) {
       out.push(chosenBar(chosen, mine));
+      if (chosen.flags?.length) {
+        out.push(el('ul', { class: 'cond-tips' }, ...chosen.flags.map((f) => el('li', {}, el('span', { 'aria-hidden': 'true' }, f.icon), ' ', f.tip))));
+      }
+      // Nói rõ giờ ít bụi hơn đã bị bỏ qua vì mưa, nắng nóng hay ozone, để người dùng không thắc mắc
+      const skipped = found.excluded
+        ? found.all.map(cond).filter((w) => hasAvoid(w.flags) && (!top || w.mean < top.mean)).sort((a, b) => a.mean - b.mean)[0]
+        : null;
+      if (skipped) {
+        const { day, range } = windowLabel(skipped);
+        const why = skipped.flags.filter((f) => f.severity === 'avoid').map((f) => f.label.toLowerCase()).join(', ');
+        out.push(el('p', { class: 'muted small' }, t`${day} ${range} ít bụi hơn nhưng ${why} nên không được gợi ý.`));
+      }
       out.push(el('a', { class: 'planner__chart-link', href: '#bieu-do', onclick: () => { $('chart-fold').open = true; } }, t('Xem các khung giờ trên biểu đồ ↓')));
     }
 
@@ -707,6 +878,8 @@ function renderPlanner() {
       out.push(el('p', { class: 'warn' }, t`Khung đã chọn vẫn ở mức ${level.label}. ${level.advice[profile.sensitive ? 'sensitive' : 'normal']}`));
     }
   }
+
+  out.push(lookBackNote(mine));
 
   if (options.length > 1) {
     out.push(el(
@@ -719,6 +892,7 @@ function renderPlanner() {
 
   const status = dataStatus(stationInfo());
   out.push(el('p', { class: `status status--${status.tone}` }, el('strong', {}, t('Độ tin cậy của dữ liệu: ')), status.text));
+  out.push(correctionNote());
 
   const notes = [t`Phần trăm tính trên PM2.5 trung bình dự báo của cả khung. Hai khung chênh dưới ${SAME_REL * 100}% hoặc dưới ${SAME_ABS} µg/m³ được coi là tương đương.`];
   if (chosen && profile.id === 'adult') {
@@ -746,7 +920,14 @@ function sideBox(tag, w, extraClass = '', scale = w.mean) {
       el('span', { style: { width: scale > 0 ? `${100 * w.mean / scale}%` : '0%' } }),
     ),
     el('span', { class: 'duel__pm' }, `PM2.5 ${num(w.mean)} µg/m³ `, levelPill(levelForAqi(w.aqi), 'pill--sm')),
+    flagChips(w.flags),
   );
+}
+
+/** Nhãn nhỏ cho mưa, nóng, UV, ozone của một khung. */
+function flagChips(flags) {
+  if (!flags?.length) return null;
+  return el('span', { class: 'cond' }, ...flags.map((f) => el('span', { class: `cond__chip cond__chip--${f.severity}` }, `${f.icon} ${f.label}`)));
 }
 
 function verdictCard({ mine, top, cmp, shouldSwitch, worst, hasOthers }) {
@@ -829,6 +1010,7 @@ function optionList({ options, mine, suggestions, chosen }) {
             { class: 'option__detail' },
             `${isMine ? t('Giờ bạn định đi · ') : ''}PM2.5 ${num(w.mean)} µg/m³ · ${levelForAqi(w.aqi).label}${delta ? ` · ${delta}` : ''}`,
           ),
+          flagChips(w.flags),
         ),
         el(
           'button',
@@ -1160,6 +1342,81 @@ function renderOrgPlan() {
   );
   $('org-grid').replaceChildren(el('table', {}, el('thead', {}, head), el('tbody', {}, body)));
   $('notice').textContent = buildNotice(days, slots);
+  renderOrgHistory();
+}
+
+/** Nhìn lại 30 ngày cho trường học, doanh nghiệp: giờ thường sạch và số ngày ổn của từng khung. */
+function renderOrgHistory() {
+  const box = $('org-history');
+  const h = state.historyView;
+  const today = state.series ? todayStr() : null;
+  const grid = h && !isSample() ? cleanGrid(h, { today, fromHour: 5, toHour: 22 }) : null;
+  box.hidden = !grid?.rows.length;
+  if (box.hidden) return;
+  const n = grid.rows.length;
+  const slots = state.slots[state.orgType];
+  const out = [];
+
+  if (slots.length) {
+    const from = Math.min(...slots.map((x) => Math.floor(parseClock(x.from))));
+    const to = Math.max(...slots.map((x) => Math.ceil(parseClock(x.to))));
+    const best = cleanestHour(grid, from, Math.max(to, from + 1));
+    if (best) {
+      out.push(el(
+        'p',
+        { class: 'org-history__best' },
+        t`Trong khung ${formatClock(from)}–${formatClock(to)}, giờ thường sạch nhất là `,
+        el('strong', {}, `${formatClock(best.hour)}–${formatClock(best.hour + 1)}`),
+        t`: ${best.clean}/${best.days} ngày ở mức Tốt hoặc Trung bình. `,
+        state.orgType === 'school' ? t('Có thể cân nhắc xếp các tiết ngoài trời cố định vào giờ này.') : t('Có thể ưu tiên việc ngoài trời vào giờ này.'),
+      ));
+    }
+    const colors = { ok: LEVELS[0].display, caution: LEVELS[2].display, stop: LEVELS[3].display };
+    out.push(el(
+      'ul',
+      { class: 'slot-hist' },
+      ...slots.map((slot) => {
+        const r = slotHistory(h, slot, state.orgType, { today });
+        if (!r.days) return null;
+        return el(
+          'li',
+          {},
+          el('span', { class: 'slot-hist__name' }, `${displaySlotName(slot)} · ${slot.from}–${slot.to}`),
+          el('span', { class: 'slot-hist__bar', 'aria-hidden': 'true' },
+            ...['ok', 'caution', 'stop'].map((k) => (r.counts[k] ? el('span', { style: { flexGrow: r.counts[k], background: colors[k] } }) : null)),
+          ),
+          el('span', { class: 'slot-hist__text' }, t`${STATUS_ICON.ok} ${r.counts.ok} ngày ổn · ${STATUS_ICON.caution} ${r.counts.caution} ngày cần điều chỉnh · ${STATUS_ICON.stop} ${r.counts.stop} ngày nên dừng ngoài trời`),
+        );
+      }),
+    ));
+  }
+
+  const seen = new Set();
+  const heat = el(
+    'div',
+    { class: 'heat', role: 'img', 'aria-label': t`Mức VN_AQI từng giờ từ 5:00 đến 22:00 trong ${n} ngày qua, mỗi hàng là một ngày` },
+    ...grid.rows.flatMap((r, k) => [
+      el('span', { class: 'heat__day' }, k % 7 === 0 || (k === n - 1 && k % 7 >= 3) ? shortDate(r.day) : ''),
+      ...r.cells.map((v, c) => {
+        const level = v == null ? null : levelForAqi(v);
+        if (level) seen.add(level);
+        return el('span', {
+          class: 'heat__cell',
+          style: { background: level?.display ?? 'transparent' },
+          title: level ? `${shortDate(r.day)} ${formatClock(grid.hours[c])} · ${level.label}` : null,
+        });
+      }),
+    ]),
+    el('span', { class: 'heat__day' }),
+    ...grid.hours.map((hh) => el('span', { class: 'heat__hour' }, hh % 3 === 2 ? `${hh}h` : '')),
+  );
+  out.push(
+    el('p', { class: 'muted small' }, t`Mỗi hàng là một ngày, mỗi ô là một giờ từ 5:00 đến 22:00 tại ${placeName()}, tô màu theo mức VN_AQI (gồm bụi mịn và ozone).`),
+    heat,
+    el('div', { class: 'heat__legend' }, ...LEVELS.filter((l) => seen.has(l)).map((l) => el('span', {}, el('i', { style: { background: l.display } }), l.label))),
+    el('p', { class: 'muted small' }, t('Tính trên dữ liệu mô hình của 30 ngày qua (đã hiệu chỉnh theo trạm nếu có). Giờ sạch thay đổi theo mùa, nên xem lại mỗi tháng.')),
+  );
+  $('org-history-body').replaceChildren(...out);
 }
 
 function buildNotice(days, slots) {
@@ -1314,4 +1571,10 @@ load().then(() => {
 fetchStations().then((list) => {
   state.stations = list;
   if (state.series && !$('app').classList.contains('is-loading')) renderAll();
+});
+fetchAccuracy().then((doc) => {
+  state.accuracy = doc;
+  if (!state.rawSeries || $('app').classList.contains('is-loading')) return;
+  deriveSeries();
+  renderAll();
 });
