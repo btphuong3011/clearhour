@@ -1,0 +1,54 @@
+name: Capture ClearHour forecast
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/forecast-archive.yml'
+      - 'scripts/capture-forecast.mjs'
+      - 'src/api.js'
+      - 'src/cities.js'
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-archive
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Capture live forecast and correction inputs
+        run: node scripts/capture-forecast.mjs "$RUNNER_TEMP/clearhour-snapshot"
+      - name: Append snapshot to forecast-archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin refs/heads/forecast-archive; then
+            git fetch --no-tags origin refs/heads/forecast-archive:refs/remotes/origin/forecast-archive
+            git switch -c forecast-archive --track origin/forecast-archive
+          else
+            status=$?
+            if [[ "$status" -ne 2 ]]; then exit "$status"; fi
+            git switch --orphan forecast-archive
+          fi
+
+          mkdir -p snapshots
+          cp -R --no-clobber "$RUNNER_TEMP/clearhour-snapshot/." snapshots/
+          git add -- snapshots
+          if git diff --cached --quiet; then exit 0; fi
+
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Capture forecast $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin HEAD:refs/heads/forecast-archive

@@ -3,7 +3,7 @@ import { accuracyNear, correctSeries, correctValues, fetchAccuracy, testDays } f
 import { aqiFromConcentration, cigarettesPerDay, combinedAqi, LEVELS, levelForAqi, levelForPm25, nowcast, WHO_PM25_24H } from './aqi.js';
 import { alignWeather, fetchAirQuality, fetchHistory, fetchSample, fetchWeather } from './api.js';
 import { downloadIcs, googleCalendarUrl, localToUtc } from './calendar.js';
-import { renderChart } from './chart.js';
+import { chartHourFlags, renderChart } from './chart.js';
 import { decideOutdoorPlan, describeOutdoorWindow, hasAvoid } from './conditions.js';
 import { CITIES } from './cities.js';
 import { el, int, num } from './format.js';
@@ -350,6 +350,7 @@ async function load() {
   $('scene-hour').disabled = true;
   $('scene-source').textContent = t('Đang tải dữ liệu…');
   $('scene-plan').disabled = true;
+  $('print-org').disabled = true;
   $('story-promo').hidden = true;
   $('scene-time').value = '–:–';
   $('scene-pm').textContent = '–';
@@ -1208,34 +1209,46 @@ function renderChartSection() {
     end = s.times.findIndex((t) => datePart(t) > last);
     if (end < 0) end = s.times.length;
   }
+  const hasOriginal = s.pm25Raw?.slice(start, end).some(Number.isFinite) === true;
+  $('chart-layer').hidden = !hasOriginal;
+  const showOriginal = hasOriginal && $('show-cams-original').checked;
+  const sensitive = profileOf().sensitive;
   renderForecastInsight(s, start, end);
-  renderChart($('chart-scroll'), $('tooltip'), {
+  const warningRows = renderChart($('chart-scroll'), $('chart-hour'), {
     series: s,
     start,
     end,
     windows: state.best.map((w, i) => ({ start: w.start, hours: w.hours, rank: i + 1, selected: w.start === chosen })),
     selected: state.chosen,
     planned: state.mine,
+    showOriginal,
+    sensitive,
     dayText: (d) => t`${weekday(d)} ${shortDate(d)} · TB ngày ${num(dailyMean(s, d))}`,
   });
   $('chart-sub').textContent =
     (state.chartRange === 'day' ? first === last ? `${dayWithDate(first)}.` : t`Từ ${shortDate(first)} đến ${shortDate(last)}.` : t('72 giờ tới.')) +
-    t(' Cột tô màu theo mức VN_AQI của từng giờ; cột mờ là giờ đã qua.');
+    t(' Màu cột thể hiện VN_AQI tính riêng từ PM2.5. Cột mờ là giờ đã qua.') +
+    (s.corrected ? t(' Cột dùng PM2.5 đã hiệu chỉnh.') : '');
+  renderLegend(warningRows, showOriginal);
 
   const rows = [];
   for (let i = s.nowIndex; i < Math.min(s.times.length, s.nowIndex + 72); i++) {
-    const t = s.times[i];
+    const time = s.times[i];
     const aqi = aqiFromConcentration(s.pm25[i], 'pm2_5');
     const level = levelForAqi(aqi);
     rows.push(
       el(
         'tr',
         {},
-        el('td', {}, `${weekday(datePart(t))} ${shortDate(datePart(t))} ${t.slice(11, 16)}`),
+        el('td', {}, `${weekday(datePart(time))} ${shortDate(datePart(time))} ${time.slice(11, 16)}`),
         el('td', {}, num(s.pm25[i])),
+        showOriginal ? el('td', {}, num(s.pm25Raw[i])) : null,
         el('td', {}, num(s.pm10[i])),
         el('td', {}, int(aqi)),
         el('td', {}, level ? level.label : '–'),
+        el('td', {}, chartHourFlags(s, i, sensitive).map((flag) =>
+          `${flag.label} (${flag.severity === 'avoid' ? t('Nên tránh') : t('Lưu ý')})`
+        ).join(' · ') || '–'),
       ),
     );
   }
@@ -1246,7 +1259,7 @@ function renderChartSection() {
       el(
         'thead',
         {},
-        el('tr', {}, ...[t('Thời gian'), 'PM2.5 (µg/m³)', 'PM10 (µg/m³)', 'VN_AQI (PM2.5)', t('Mức')].map((h) => el('th', { scope: 'col' }, h))),
+        el('tr', {}, ...[t('Thời gian'), 'PM2.5 (µg/m³)', ...(showOriginal ? [t('CAMS gốc (µg/m³)')] : []), 'PM10 (µg/m³)', 'VN_AQI (PM2.5)', t('Mức'), t('Cảnh báo')].map((h) => el('th', { scope: 'col' }, h))),
       ),
       el('tbody', {}, rows),
     ),
@@ -1258,12 +1271,16 @@ function renderChartSection() {
     t('Chỉ số theo từng giờ được quy đổi trực tiếp từ nồng độ dự báo, không dùng Nowcast như trạm quan trắc.');
 }
 
-function renderLegend() {
-  $('legend').replaceChildren(
+function renderLegend(rows = [], showOriginal = false) {
+  $('legend').replaceChildren(...[
     ...LEVELS.map((l) => el('li', {}, el('i', { style: { background: l.display } }), l.label)),
     el('li', {}, el('i', { class: 'mark' }, '1'), t('Khung đề xuất')),
     el('li', {}, el('i', { class: 'mark mark--plan' }), t('Giờ bạn định đi')),
-  );
+    showOriginal ? el('li', {}, el('i', { class: 'chart-original-key', 'aria-hidden': 'true' }), t('CAMS gốc')) : null,
+    rows.length ? el('li', { class: 'legend__break' }, el('span', { class: 'chart-legend--avoid', 'aria-hidden': 'true' }, '▲'), t('Nên tránh')) : null,
+    rows.length ? el('li', {}, el('span', { class: 'chart-legend--warn', 'aria-hidden': 'true' }, '●'), t('Lưu ý')) : null,
+    ...rows.map((row) => el('li', {}, el('span', { 'aria-hidden': 'true' }, row.icon), row.label)),
+  ].filter(Boolean));
 }
 
 // ---------- Lịch cố định (trường học, doanh nghiệp) ----------
@@ -1336,6 +1353,7 @@ function renderOrgPlan() {
   const s = state.series;
   const days = orgDays();
   const slots = state.slots[state.orgType];
+  const counts = { ok: 0, caution: 0, stop: 0 };
 
   const head = el('tr', {}, el('th', { scope: 'col' }, t('Hoạt động')), ...days.map((d) => el('th', { scope: 'col' }, dayWithDate(d))));
   const body = slots.map((slot) =>
@@ -1347,6 +1365,7 @@ function renderOrgPlan() {
         if (slotPassed(d, slot)) return el('td', { class: 'muted small' }, t('Đã qua'));
         const v = evaluateSlot(s, d, slot, state.orgType);
         if (!v) return el('td', { class: 'muted small' }, t('Chưa có dữ liệu'));
+        counts[v.status] += 1;
         return el(
           'td',
           {},
@@ -1360,9 +1379,53 @@ function renderOrgPlan() {
       }),
     ),
   );
-  $('org-grid').replaceChildren(el('table', {}, el('thead', {}, head), el('tbody', {}, body)));
+  const table = el('table', {}, el('thead', {}, head), el('tbody', {}, body));
+  $('org-grid').replaceChildren(table);
+  $('print-org').disabled = !slots.length || state.weatherStatus === 'loading';
+  renderOrgPrintReport(table, slots, counts);
   $('notice').textContent = buildNotice(days, slots);
   renderOrgHistory();
+}
+
+function renderOrgPrintReport(table, slots, counts) {
+  const series = state.series;
+  const reference = series.times[series.nowIndex];
+  const type = ORG_TYPES.find((item) => item.id === state.orgType).label;
+  const source = isSample() ? t('Dữ liệu mẫu Hà Nội') : series.corrected
+    ? t`Dự báo CAMS, PM2.5 hiệu chỉnh theo trạm ${series.corrected.name}` : t('Dự báo CAMS gốc');
+  const summary = [
+    [counts.ok, t('Giữ lịch')],
+    [counts.caution, t('Cần điều chỉnh')],
+    [counts.stop, t('Dừng hoạt động ngoài trời')],
+  ];
+  const history = state.historyView;
+  const recent = history && !isSample() ? slots.map((slot) => {
+    const { days, counts: tally } = slotHistory(history, slot, state.orgType, { today: todayStr() });
+    return days ? el('li', {},
+      el('strong', {}, displaySlotName(slot)),
+      t` · ${tally.ok}/${days} ngày có thể giữ lịch theo mô hình.`,
+    ) : null;
+  }).filter(Boolean) : [];
+  $('org-print-report').replaceChildren(...[
+    el('header', { class: 'org-print-report__header' },
+      el('p', { class: 'org-print-report__brand' }, 'ClearHour'),
+      el('h1', { id: 'print-title' }, t('Báo cáo lịch hoạt động ngoài trời')),
+      el('p', {}, `${type} · ${placeName()}`),
+      el('p', {}, t`Giờ tham chiếu ${reference.slice(11, 16)} ngày ${shortDate(datePart(reference), true)} (${series.timezone}).`),
+      el('p', { class: 'org-print-report__source' }, source),
+      state.weatherStatus === 'unavailable' ? el('p', {}, t('Chưa có dự báo thời tiết. Hãy kiểm tra mưa và nhiệt độ trước khi đi.')) : null,
+    ),
+    el('dl', { class: 'org-print-report__summary' }, ...summary.map(([value, label]) =>
+      el('div', {}, el('dt', {}, label), el('dd', {}, int(value))),
+    )),
+    table.cloneNode(true),
+    recent.length ? el('section', { class: 'org-print-report__history' },
+      el('h2', {}, t('Nhìn lại tối đa 30 ngày theo mô hình')),
+      el('p', {}, t('Thống kê dựa trên PM2.5 và O₃ khi có dữ liệu.')),
+      el('ul', {}, recent),
+    ) : null,
+    el('footer', {}, t('Nguồn: ClearHour – dự báo CAMS/Open-Meteo, chỉ số VN_AQI theo QĐ 1459/QĐ-TCMT. Thông tin mang tính tham khảo.')),
+  ].filter(Boolean));
 }
 
 /** Nhìn lại 30 ngày cho trường học, doanh nghiệp: giờ thường sạch và số ngày ổn của từng khung. */
@@ -1550,6 +1613,9 @@ function initControls() {
   });
 
   $('story-open').addEventListener('click', startStory);
+  $('show-cams-original').addEventListener('change', () => {
+    if (state.series) renderChartSection();
+  });
   $('chart-fold').addEventListener('toggle', (e) => {
     if (e.target.open && state.series) renderChartSection();
   });
@@ -1574,6 +1640,11 @@ function initControls() {
     renderOrg();
   });
   $('copy-notice').addEventListener('click', copyNotice);
+  $('print-org').addEventListener('click', () => {
+    document.body.classList.add('org-printing');
+    window.print();
+  });
+  window.addEventListener('afterprint', () => document.body.classList.remove('org-printing'));
 
   let resizeTimer;
   window.addEventListener('resize', () => {

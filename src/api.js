@@ -67,14 +67,22 @@ async function cachedForecast(cache, url, read) {
   return data;
 }
 
+export function airQualityUrl(lat, lon) {
+  const params = new URLSearchParams({ ...forecastParams(lat, lon), current: 'pm2_5,pm10,ozone', hourly: 'pm2_5,pm10,ozone' });
+  return `${ENDPOINT}?${params}`;
+}
+
+export function weatherUrl(lat, lon) {
+  const params = new URLSearchParams({ ...forecastParams(lat, lon), hourly: WEATHER_VARS });
+  return `${WEATHER_ENDPOINT}?${params}`;
+}
+
 export function fetchAirQuality(lat, lon) {
-  const air = new URLSearchParams({ ...forecastParams(lat, lon), current: 'pm2_5,pm10,ozone', hourly: 'pm2_5,pm10,ozone' });
-  return cachedForecast(forecastCache, `${ENDPOINT}?${air}`, async (url) => normalize(await getJson(url), 'live'));
+  return cachedForecast(forecastCache, airQualityUrl(lat, lon), async (url) => normalize(await getJson(url), 'live'));
 }
 
 export function fetchWeather(lat, lon) {
-  const params = new URLSearchParams({ ...forecastParams(lat, lon), hourly: WEATHER_VARS });
-  return cachedForecast(weatherCache, `${WEATHER_ENDPOINT}?${params}`, getJson);
+  return cachedForecast(weatherCache, weatherUrl(lat, lon), getJson);
 }
 
 /**

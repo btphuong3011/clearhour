@@ -233,11 +233,16 @@
               <div class="seg" id="chart-range" role="radiogroup" aria-label="Khoảng thời gian của biểu đồ" data-en-label="Chart time range"></div>
             </div>
             <div id="chart-insight" class="chart-insight"></div>
+            <label class="chart-layer" id="chart-layer" hidden>
+              <input type="checkbox" id="show-cams-original" />
+              <span data-en="Overlay original CAMS">Hiện đường CAMS gốc</span>
+            </label>
             <ul class="legend" id="legend" aria-label="Chú giải biểu đồ" data-en-label="Chart legend"></ul>
             <div class="chart" id="chart">
-              <div class="chart__scroll" id="chart-scroll"></div>
-              <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+              <div class="chart__scroll" id="chart-scroll" tabindex="0" role="group" aria-labelledby="chart-title" aria-describedby="chart-help"></div>
             </div>
+            <p class="muted small chart-help" id="chart-help" data-en="Tap a column, or focus the chart and use the arrow keys to inspect an hour.">Chạm vào cột giờ hoặc dùng phím mũi tên khi biểu đồ được chọn.</p>
+            <div id="chart-hour" class="chart-hour" aria-live="polite"></div>
             <details class="table-view">
               <summary data-en="View the data table">Xem bảng số liệu</summary>
               <div class="table-wrap" id="table"></div>
@@ -292,6 +297,7 @@
               <div class="table-wrap" id="org-grid"></div>
               <div class="org__actions">
                 <button class="btn" id="copy-notice" type="button" data-en="Copy notice">Sao chép thông báo</button>
+                <button class="btn btn--ghost" id="print-org" type="button" disabled data-en="Print report">In báo cáo</button>
                 <span class="muted small" id="copy-status" aria-live="polite"></span>
               </div>
               <details class="notice-preview">
@@ -337,6 +343,8 @@
         <p class="small"><span data-en="Forecast:">Dự báo:</span> <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> / CAMS. <span data-en="Station readings:">Số đo trạm:</span> <a href="https://openaq.org/" rel="noopener">OpenAQ</a>. <span data-en="VN_AQI follows Decision 1459/QĐ-TCMT. WHO reference values follow the 2021 Global Air Quality Guidelines. Breathing-rate estimates use the US EPA Exposure Factors Handbook.">VN_AQI theo Quyết định 1459/QĐ-TCMT. Ngưỡng của WHO theo Hướng dẫn chất lượng không khí (2021). Ước tính lượng không khí hít vào dựa trên Sổ tay hệ số phơi nhiễm của US EPA.</span></p>
       </div>
     </footer>
+
+    <section id="org-print-report" class="org-print-report" aria-labelledby="print-title"></section>
 
     <script type="module" src="src/app.js"></script>
   </body>

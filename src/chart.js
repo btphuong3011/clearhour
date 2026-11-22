@@ -1,12 +1,39 @@
 import { t } from './i18n.js';
 import { aqiFromConcentration, levelForAqi } from './aqi.js';
-import { num } from './format.js';
+import { conditionFlags, describeOutdoorWindow, windowConditions } from './conditions.js';
+import { el, int, num } from './format.js';
 import { datePart, hourOf, shortDate, weekday } from './time.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MARGIN = { top: 26, right: 14, bottom: 44, left: 34 };
 const HEIGHT = 280;
-const MIN_SLOT = 8;
+const MIN_SLOT = 12;
+const FLAG_ROW = 13;
+
+const WARNING_ROWS = [
+  { id: 'rain', icon: '🌧️', label: t('Mưa') },
+  { id: 'heat', icon: '🌡️', label: t('Nóng') },
+  { id: 'uv', icon: '☀️', label: 'UV' },
+  { id: 'o3', icon: 'O₃', label: 'O₃' },
+  { id: 'pm25', icon: '◉', label: 'PM2.5' },
+];
+
+export function chartHourFlags(series, index, sensitive) {
+  const aqi = aqiFromConcentration(series.pm25[index], 'pm2_5');
+  if (aqi == null) return conditionFlags(windowConditions(series, index, 1));
+  return describeOutdoorWindow(series, { start: index, hours: 1, aqi }, sensitive).flags;
+}
+
+function flagValue(series, index, id) {
+  const weather = series.weather;
+  switch (id) {
+    case 'rain': return `${int(weather.rainProb[index])}%`;
+    case 'heat': return `${num(weather.feels[index])} °C`;
+    case 'uv': return num(weather.uv[index]);
+    case 'o3': return `${num(series.o3[index])} µg/m³`;
+    default: return null;
+  }
+}
 
 function svg(tag, attrs = {}, text) {
   const node = document.createElementNS(SVG_NS, tag);
@@ -33,12 +60,14 @@ function barPath(x, y, w, h) {
 /**
  * Vẽ biểu đồ cột PM2.5 theo giờ.
  * @param {HTMLElement} host  khung cuộn chứa SVG
- * @param {HTMLElement} tip   tooltip dùng chung
- * @param {{series, start, end, windows, planned, selected, dayText}} opts
+ * @param {HTMLElement} detail   Thông tin của giờ đang chọn
+ * @param {{series, start, end, windows, planned, selected, dayText, sensitive, showOriginal}} opts
  *   windows: [{start, hours, rank}] các khung đề xuất; planned: {start, hours} giờ người dùng định đi;
  *   dayText: (dateStr) => nhãn ngày dưới trục.
  */
-export function renderChart(host, tip, { series, start, end, windows = [], planned = null, selected = null, dayText }) {
+export function renderChart(host, detail, {
+  series, start, end, windows = [], planned = null, selected = null, dayText, sensitive = false, showOriginal = false,
+}) {
   const dayLabelOf = dayText ?? ((d) => `${weekday(d)} ${shortDate(d)}`);
   const n = end - start;
   const width = Math.max(host.clientWidth, n * MIN_SLOT + MARGIN.left + MARGIN.right);
@@ -46,14 +75,21 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
   const plotH = HEIGHT - MARGIN.top - MARGIN.bottom;
   const slot = plotW / n;
   const values = series.pm25.slice(start, end);
-  const { top, ticks } = niceScale(Math.max(30, ...values.filter((v) => v != null)) * 1.08);
+  const original = showOriginal ? series.pm25Raw?.slice(start, end) ?? [] : [];
+  const flagsByHour = values.map((_, index) => chartHourFlags(series, start + index, sensitive));
+  const visibleFlags = new Set(flagsByHour.flat().map((flag) => flag.id));
+  const rows = WARNING_ROWS.filter((row) => visibleFlags.has(row.id));
+  const flagSpace = rows.length ? rows.length * FLAG_ROW + 5 : 0;
+  const height = HEIGHT + flagSpace;
+  const maxValue = Math.max(30, ...values.filter(Number.isFinite), ...original.filter(Number.isFinite));
+  const { top, ticks } = niceScale(maxValue * 1.08);
   const x = (i) => MARGIN.left + (i - start) * slot;
   const y = (v) => MARGIN.top + plotH - (v / top) * plotH;
 
   const root = svg('svg', {
     width,
-    height: HEIGHT,
-    viewBox: `0 0 ${width} ${HEIGHT}`,
+    height,
+    viewBox: `0 0 ${width} ${height}`,
     role: 'img',
     'aria-label': t`Biểu đồ nồng độ PM2.5 theo giờ, ${n} giờ, cao nhất ${num(Math.max(...values))} µg/m³`,
   });
@@ -71,15 +107,15 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     const h = hourOf(t);
     if (h === 0 || i === start) {
       if (h === 0) {
-        root.append(svg('line', { x1: x(i), x2: x(i), y1: MARGIN.top, y2: HEIGHT - MARGIN.bottom + 30, stroke: 'var(--line)', 'stroke-width': 1 }));
+        root.append(svg('line', { x1: x(i), x2: x(i), y1: MARGIN.top, y2: height - MARGIN.bottom + 30, stroke: 'var(--line)', 'stroke-width': 1 }));
       }
       const d = datePart(t);
       if (h === 0 || h < 18) {
-        root.append(svg('text', { x: x(i) + 4, y: HEIGHT - 6, class: 't-day' }, dayLabelOf(d)));
+        root.append(svg('text', { x: x(i) + 4, y: height - 6, class: 't-day' }, dayLabelOf(d)));
       }
     }
     if (h % hourStep === 0) {
-      root.append(svg('text', { x: x(i) + slot / 2, y: HEIGHT - MARGIN.bottom + 15, 'text-anchor': 'middle' }, `${String(h).padStart(2, '0')}h`));
+      root.append(svg('text', { x: x(i) + slot / 2, y: height - MARGIN.bottom + 15, 'text-anchor': 'middle' }, `${String(h).padStart(2, '0')}h`));
     }
   }
 
@@ -149,55 +185,88 @@ export function renderChart(host, tip, { series, start, end, windows = [], plann
     root.append(svg('text', { x: nx + (roomLeft ? -5 : 5), y: MARGIN.top + 10, 'text-anchor': roomLeft ? 'end' : 'start', class: 't-now' }, t('Bây giờ')));
   }
 
-  // Lớp bắt chuột: mỗi giờ là một vùng cao bằng cả biểu đồ
+  if (original.some(Number.isFinite)) {
+    let previous = false;
+    const path = original.map((value, k) => {
+      const valid = Number.isFinite(value);
+      const point = valid ? `${previous ? 'L' : 'M'}${x(start + k) + slot / 2},${y(value)}` : '';
+      previous = valid;
+      return point;
+    }).join(' ');
+    root.append(svg('path', { d: path, class: 'chart-original', 'aria-hidden': 'true' }));
+  }
+
+  // Mỗi hàng dành cho một loại cảnh báo. Tam giác chỉ giờ nên tránh, chấm tròn là lưu ý.
+  rows.forEach((row, lane) => {
+    const cy = HEIGHT - MARGIN.bottom + 8 + lane * FLAG_ROW;
+    root.append(svg('text', { x: MARGIN.left - 7, y: cy + 3, 'text-anchor': 'end', class: 'chart-flag-label' }, row.icon));
+    flagsByHour.forEach((flags, k) => {
+      const flag = flags.find((entry) => entry.id === row.id);
+      if (!flag) return;
+      const cx = x(start + k) + slot / 2;
+      const attrs = { class: `chart-flag chart-flag--${flag.severity}`, 'aria-hidden': 'true' };
+      root.append(flag.severity === 'avoid'
+        ? svg('path', { ...attrs, d: `M${cx},${cy - 4} L${cx + 4.5},${cy + 4} L${cx - 4.5},${cy + 4} Z` })
+        : svg('circle', { ...attrs, cx, cy, r: 3 }));
+    });
+  });
+
+  // Vùng chạm cao bằng cột và dải cảnh báo. Tab một lần, dùng phím mũi tên để đi qua các giờ.
   const hits = svg('g', { fill: 'transparent' });
-  let hovered = null;
-  const hide = () => {
-    tip.hidden = true;
-    hovered?.classList.remove('is-hover');
-    hovered = null;
+  const selection = svg('rect', { y: MARGIN.top, width: slot, height: plotH + flagSpace, class: 'chart-hour-focus' });
+  root.append(selection);
+  let active = null;
+  const inspect = (index, reveal = false) => {
+    if (index !== active) {
+      bars[active - start]?.classList.remove('is-hover');
+      bars[index - start]?.classList.add('is-hover');
+      active = index;
+      const time = series.times[index];
+      host.dataset.hour = time;
+      selection.setAttribute('x', x(index));
+      const value = series.pm25[index];
+      const raw = original[index - start];
+      const flags = flagsByHour[index - start];
+      detail.replaceChildren(...[
+        el('div', { class: 'chart-hour__main' },
+          el('strong', {}, `${weekday(datePart(time))} ${shortDate(datePart(time))} · ${time.slice(11, 16)}`),
+          el('span', {}, value == null ? t('PM2.5 chưa có dữ liệu') : `PM2.5 ${num(value)} µg/m³`),
+          Number.isFinite(raw) ? el('span', { class: 'muted' }, t`CAMS gốc ${num(raw)} µg/m³`) : null,
+        ),
+        flags.length ? el('ul', { class: 'chart-hour__flags' }, ...flags.map((flag) => {
+          const metric = flagValue(series, index, flag.id);
+          return el('li', { class: `chart-hour__flag--${flag.severity}` },
+            el('span', { 'aria-hidden': 'true' }, flag.icon),
+            el('strong', {}, flag.label),
+            metric ? el('span', {}, metric) : null,
+            el('span', { class: 'muted' }, flag.severity === 'avoid' ? t('Nên tránh') : t('Lưu ý')),
+          );
+        })) : null,
+      ].filter(Boolean));
+    }
+    if (reveal) {
+      const left = x(index);
+      if (left < host.scrollLeft) host.scrollLeft = left;
+      else if (left + slot > host.scrollLeft + host.clientWidth) host.scrollLeft = left + slot - host.clientWidth;
+    }
   };
-  for (let i = start; i < end; i++) {
-    const v = series.pm25[i];
-    if (v == null) continue;
-    const hit = svg('rect', { x: x(i), y: MARGIN.top - 20, width: slot, height: plotH + 20 });
-    const show = (ev) => {
-      hovered?.classList.remove('is-hover');
-      hovered = bars[i - start];
-      hovered?.classList.add('is-hover');
-      const aqi = aqiFromConcentration(v, 'pm2_5');
-      const level = levelForAqi(aqi);
-      const t = series.times[i];
-      tip.replaceChildren();
-      const head = document.createElement('div');
-      head.className = 'muted';
-      head.textContent = `${weekday(datePart(t))} ${shortDate(datePart(t))} · ${t.slice(11, 16)}${i < series.nowIndex ? t(' (đã qua)') : ''}`;
-      const val = document.createElement('div');
-      const strong = document.createElement('strong');
-      strong.textContent = num(v);
-      val.append(strong, ' µg/m³ PM2.5');
-      const lv = document.createElement('div');
-      const key = document.createElement('span');
-      key.className = 'key';
-      key.style.background = level.display;
-      lv.append(key, `VN_AQI ≈ ${aqi} · ${level.label}`);
-      tip.append(head, val, lv);
-      tip.hidden = false;
-      const box = host.parentElement.getBoundingClientRect();
-      const px = (ev.clientX ?? box.left + x(i) - host.scrollLeft) - box.left;
-      const tw = tip.offsetWidth;
-      tip.style.left = `${Math.min(Math.max(px - tw / 2, 0), box.width - tw)}px`;
-      tip.style.top = `${Math.max(0, y(v) - 78)}px`;
-    };
-    hit.addEventListener('pointerenter', show);
-    hit.addEventListener('pointermove', show);
-    hit.addEventListener('pointerdown', show);
+  for (let index = start; index < end; index++) {
+    const hit = svg('rect', { x: x(index), y: MARGIN.top - 20, width: slot, height: plotH + flagSpace + 20, 'data-hour': series.times[index] });
+    hit.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') inspect(index); });
+    hit.addEventListener('click', () => inspect(index));
     hits.append(hit);
   }
-  root.addEventListener('pointerleave', hide);
   root.append(hits);
 
-  hide();
+  const remembered = series.times.indexOf(host.dataset.hour);
+  const initial = remembered >= start && remembered < end ? remembered : selected?.start ?? planned?.start ?? series.nowIndex;
   host.replaceChildren(root);
-  host.onscroll = hide;
+  inspect(Math.max(start, Math.min(end - 1, initial)));
+  host.onkeydown = (event) => {
+    const next = { ArrowLeft: active - 1, ArrowRight: active + 1, Home: start, End: end - 1 }[event.key];
+    if (next == null) return;
+    event.preventDefault();
+    inspect(Math.max(start, Math.min(end - 1, next)), true);
+  };
+  return rows;
 }

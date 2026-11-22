@@ -8,7 +8,9 @@ Chọn **Tiếng Việt / English** trên thanh điều hướng để đổi ng
 
 Dự án demo cho **Youth Digital Citizen Challenge 2026** – chủ đề *Urban Air-chitects: Designing Healthier Air for Cities* (UNDP Việt Nam & Chính phủ Nhật Bản).
 
-![Giao diện ClearHour](docs/screenshot.jpg)
+![Biểu đồ ClearHour với dấu cảnh báo và đường CAMS gốc](docs/screenshot.jpg)
+
+*Biểu đồ Hà Nội với bản dự báo lấy ngày 22/11/2026. Tam giác đánh dấu giờ nên tránh, chấm tròn là lưu ý. Nét đứt là PM2.5 từ CAMS trước hiệu chỉnh.*
 
 *[English summary below](#english-summary)*
 
@@ -37,9 +39,10 @@ Trong khi đó, bụi mịn **thay đổi rất mạnh trong ngày**. Ví dụ t
 | **Hành động sau quyết định** | Khung đã chọn đưa được vào Google Lịch, tải tệp .ics (nhắc trước 15 phút), hoặc sao chép thành tin nhắn rủ nhóm có ngày giờ cụ thể, mức bụi dự báo và link lưu cả giờ định đi lẫn khung đã chọn. Link mở sau khi khung giờ kết thúc vẫn ghi rõ lịch gốc. |
 | **Độ tin cậy của dữ liệu** | Một dòng ngay dưới gợi ý cho biết trạm đo gần nhất (OpenAQ) khớp hay lệch với mô hình, hoặc không có trạm để đối chiếu. Khi trạm đo còn mới và đang xấu hơn dự báo, lời khuyên sức khỏe theo trạm đo. |
 | **Không khí lúc này** | VN_AQI giờ (Nowcast cho bụi, trung bình 1 giờ cho ozone), PM2.5 và O₃ giờ này, số đo trạm gần nhất, khuyến nghị theo nhóm người (trẻ em, người cao tuổi, người có bệnh hô hấp – tim mạch, phụ nữ mang thai). Các phép so sánh theo ngày (ngưỡng WHO 24 giờ, quy đổi điếu thuốc) nằm riêng trong phần mở rộng để không lẫn với số liệu theo giờ. |
-| **Biểu đồ theo giờ** | Mặc định xem trọn ngày của khung đang chọn, có ký hiệu riêng cho "giờ bạn định đi" và các khung đề xuất; chuyển được sang 72 giờ và bảng số liệu. |
+| **Biểu đồ theo giờ** | Dải cảnh báo đặt dưới cột PM2.5. Chạm cột hoặc dùng phím mũi tên để xem cảnh báo chi tiết. Khi địa điểm có hiệu chỉnh, có thể bật đường CAMS gốc để so sánh trên cùng thang đo. Có cả chế độ 72 giờ và bảng số liệu. |
 | **Trong nhà: giờ mở cửa sổ** | Dải 24 giờ cho biết lúc nào nên mở cửa thông gió, lúc nào chỉ mở ngắn và lúc nào nên đóng kín, bật máy lọc. |
 | **Lịch cố định: trường học & doanh nghiệp** | Nhập các khung hoạt động ngoài trời (giờ thể dục, ra chơi, ca giao hàng…). App đánh giá từng khung trong 3 ngày tới theo mức đỉnh và trung bình, rồi **soạn sẵn thông báo** cho phụ huynh hoặc nhân viên. |
+| **In báo cáo** | Nút **In báo cáo** mở bản A4 của lịch trường học hoặc ca làm đang xem, có nguồn dữ liệu, giờ cập nhật, tổng lượt theo khuyến nghị và tóm tắt lịch sử nếu có. Có thể chọn lưu PDF trong hộp thoại in. |
 
 Ngoài ra: 12 đô thị lớn, "Vị trí của tôi", giao diện sáng/tối, chạy tốt trên điện thoại, link chia sẻ giữ nguyên lựa chọn kể cả khoảng rảnh và giờ định đi (`?city=hanoi&free=5-7,17-21&plan=1.7`), và **tự chuyển sang dữ liệu mẫu có ghi rõ ngày** nếu API lỗi.
 
@@ -83,6 +86,16 @@ Giao diện ưu tiên lời nói thường ngày hơn con số: giờ ghi kiểu
 - **Trợ lý AI hỏi đáp:** trả lời câu hỏi tự do ("Con tôi bị hen, chiều nay đá bóng được không?") dựa trên dữ liệu của app và khuyến nghị của QĐ 1459.
 - **Mô hình bền vững:** cá nhân dùng miễn phí; trường học và doanh nghiệp có lao động ngoài trời (giao hàng, xây dựng) trả phí cho bảng điều khiển xếp ca và báo cáo phơi nhiễm hằng tháng; tài trợ CSR.
 - Gợi ý tuyến đường ít ô nhiễm khi có dữ liệu chi tiết theo không gian.
+
+## Kho dự báo đã lấy
+
+Workflow [Capture ClearHour forecast](.github/workflows/forecast-archive.yml) lấy dữ liệu cho 12 thành phố mỗi 6 giờ và ghi từng bản vào [nhánh `forecast-archive`](https://github.com/btphuong3011/clearhour/tree/forecast-archive/snapshots). Kho nằm riêng với bản triển khai GitHub Pages.
+
+- Mỗi bản ghi giữ thời điểm lấy dữ liệu UTC, tọa độ thành phố, ô lưới và giờ dự báo, phiên bản mã, dữ liệu PM2.5/PM10/O₃, thời tiết và thông số hiệu chỉnh đã công bố khi có thể tải được.
+- Thời điểm lưu dùng để tính khoảng cách tới giờ cần kiểm chứng. Mốc này là lúc ClearHour truy cập API. Giờ dự báo có hiệu lực và giờ mô hình khởi chạy là hai thông tin khác.
+- Mất dữ liệu thời tiết hoặc hiệu chỉnh được ghi rõ trong bản lưu. Nếu thiếu dự báo không khí, workflow báo lỗi và không tạo bản ghi rỗng.
+
+Kho này dành cho đánh giá dự báo đã có tại thời điểm ra quyết định. Kết quả đối chiếu mỗi ngày trong app hiện được tính từ dữ liệu mô hình quá khứ và được ghi rõ phương pháp ở mục **Dự báo đúng đến đâu?**.
 
 ## Chạy trên máy
 
@@ -134,13 +147,14 @@ src/stations.js             Đọc số đo trạm, tìm trạm gần nhất
 src/conditions.js           Cảnh báo mưa, nắng nóng, UV, ozone cho từng khung giờ
 src/accuracy.js             Đọc kết quả kiểm tra dự báo, hiệu chỉnh theo giờ trong ngày
 src/history.js              Nhìn lại 30 ngày: mức giảm khi đổi giờ, giờ thường sạch
-src/chart.js                Biểu đồ SVG tự vẽ (không dùng thư viện)
+src/chart.js                Biểu đồ SVG, cảnh báo theo giờ và lớp CAMS gốc
 src/scene.js                Cảnh thành phố SVG: màu trời theo giờ, bụi mù theo PM2.5
 src/story.js                Câu chuyện "Một buổi sáng của Minh" dùng dự báo thật
 src/api.js                  Gọi Open-Meteo (chất lượng không khí, thời tiết, 30 ngày qua), dữ liệu mẫu dự phòng
 src/app.js                  Kết nối giao diện
 scripts/fetch-stations.mjs  Lấy số đo trạm từ OpenAQ (chạy trong GitHub Actions)
 scripts/accuracy.mjs        So dự báo với số đo trạm 60 ngày, tính hệ số hiệu chỉnh
+scripts/capture-forecast.mjs Lưu bản dự báo đã lấy và dữ liệu hiệu chỉnh đi kèm
 .github/workflows/          Test + cập nhật dữ liệu trạm + deploy GitHub Pages mỗi giờ
 data/                       Dữ liệu mẫu Hà Nội, số đo trạm, kết quả kiểm tra dự báo
 tests/                      Unit test (node:test)
