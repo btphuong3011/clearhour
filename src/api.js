@@ -7,19 +7,22 @@ const WEATHER_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 const WEATHER_VARS = 'precipitation_probability,precipitation,apparent_temperature,uv_index';
 const SAMPLE_URL = './data/sample-hanoi.json';
 const TTL_MS = 15 * 60 * 1000;
-const cache = new Map();
+const forecastCache = new Map();
+const weatherCache = new Map();
+const forecastParams = (latitude, longitude) => ({ latitude, longitude, timezone: 'auto', past_days: 1, forecast_days: 4 });
 
 /** Đặt dữ liệu thời tiết vào đúng từng giờ của chuỗi chất lượng không khí (cùng giờ địa phương). */
 export function alignWeather(times, raw) {
-  if (!raw?.hourly?.time) return null;
+  if (!raw?.hourly?.time?.length) return null;
   const at = new Map(raw.hourly.time.map((t, i) => [t, i]));
   const pick = (key) => times.map((t) => (at.has(t) ? raw.hourly[key]?.[at.get(t)] ?? null : null));
-  return {
+  const weather = {
     rainProb: pick('precipitation_probability'),
     rain: pick('precipitation'),
     feels: pick('apparent_temperature'),
     uv: pick('uv_index'),
   };
+  return [weather.rainProb, weather.feels, weather.uv].some((values) => values.some(Number.isFinite)) ? weather : null;
 }
 
 export function normalize(raw, source, weatherRaw = raw.weather) {
@@ -56,22 +59,22 @@ async function getJson(url, ms = 12000) {
   }
 }
 
-export async function fetchAirQuality(lat, lon) {
-  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
-  const hit = cache.get(key);
+async function cachedForecast(cache, url, read) {
+  const hit = cache.get(url);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
-
-  const common = { latitude: lat, longitude: lon, timezone: 'auto', past_days: 1, forecast_days: 4 };
-  const air = new URLSearchParams({ ...common, current: 'pm2_5,pm10,ozone', hourly: 'pm2_5,pm10,ozone' });
-  const weather = new URLSearchParams({ ...common, hourly: WEATHER_VARS });
-  // Thời tiết chỉ để cảnh báo thêm: lỗi thì vẫn chạy với dữ liệu bụi
-  const [rawAir, rawWeather] = await Promise.all([
-    getJson(`${ENDPOINT}?${air}`),
-    getJson(`${WEATHER_ENDPOINT}?${weather}`).catch(() => null),
-  ]);
-  const data = normalize(rawAir, 'live', rawWeather);
-  cache.set(key, { at: Date.now(), data });
+  const data = await read(url);
+  cache.set(url, { at: Date.now(), data });
   return data;
+}
+
+export function fetchAirQuality(lat, lon) {
+  const air = new URLSearchParams({ ...forecastParams(lat, lon), current: 'pm2_5,pm10,ozone', hourly: 'pm2_5,pm10,ozone' });
+  return cachedForecast(forecastCache, `${ENDPOINT}?${air}`, async (url) => normalize(await getJson(url), 'live'));
+}
+
+export function fetchWeather(lat, lon) {
+  const params = new URLSearchParams({ ...forecastParams(lat, lon), hourly: WEATHER_VARS });
+  return cachedForecast(weatherCache, `${WEATHER_ENDPOINT}?${params}`, getJson);
 }
 
 /**

@@ -7,7 +7,8 @@ import { t } from './i18n.js';
 //  - UV: chỉ số từ 8 là "rất cao" theo thang của WHO.
 //  - Ozone: VN_AQI giờ của O3 (QĐ 1459/QĐ-TCMT) trên 100 là kém; 51–100 chỉ nhắc khi ozone đang là chất trội hơn bụi mịn.
 
-import { aqiFromConcentration } from './aqi.js';
+import { aqiFromConcentration, levelForAqi } from './aqi.js';
+import { compareWithPlan, findBestWindows, windowStats } from './planner.js';
 
 export const RAIN_PROB = 60;
 export const FEELS_HOT = 35;
@@ -74,4 +75,50 @@ export function withConditions(series, w) {
   const cond = windowConditions(series, w.start, w.hours);
   const pmAqi = w.pmAqi ?? w.aqi;
   return { ...w, pmAqi, aqi: Math.max(pmAqi, cond.o3Aqi ?? 0), cond, flags: conditionFlags(cond, pmAqi) };
+}
+
+/** Gắn cảnh báo cho một khung đi ngoài trời, kể cả khung được mở qua link chia sẻ. */
+export function describeOutdoorWindow(series, window, sensitive = false) {
+  if (!window) return null;
+  const result = withConditions(series, window);
+  if (result.pmAqi > (sensitive ? 100 : 150)) {
+    const level = levelForAqi(result.pmAqi);
+    result.flags.unshift({
+      id: 'pm25', severity: 'avoid', icon: '◉', label: t('Bụi mịn cao'),
+      tip: level.advice[sensitive ? 'sensitive' : 'normal'],
+    });
+  }
+  return result;
+}
+
+/** Cùng một quy tắc chọn giờ cho phần so sánh và câu chuyện của Minh. */
+export function decideOutdoorPlan(series, opts, planned = null) {
+  const mine = planned == null ? null : describeOutdoorWindow(series, windowStats(series.pm25, planned, opts.hours, opts.ventilation), opts.sensitive);
+  const mineBlocked = mine != null && hasAvoid(mine.flags);
+  const descriptions = new Map();
+  const found = findBestWindows(series, { ...opts, exclude: (window) => {
+    const details = describeOutdoorWindow(series, window, opts.sensitive);
+    descriptions.set(window.start, details);
+    return window.start === mine?.start || hasAvoid(details.flags);
+  } });
+  const alternatives = found.best.map((window) => descriptions.get(window.start));
+  const suggestions = mine && !mineBlocked
+    ? alternatives.filter((window) => compareWithPlan(mine, window).relation !== 'worse')
+    : alternatives;
+  const top = suggestions[0] ?? null;
+  const cmp = mine && top ? compareWithPlan(mine, top) : null;
+  const windows = [...descriptions.values()];
+  const blocked = windows.filter((window) => hasAvoid(window.flags));
+  const worstSuitable = mine ? null : windows.reduce((worst, window) =>
+    !hasAvoid(window.flags) && (!worst || window.mean > worst.mean) ? window : worst, null);
+  if (mineBlocked && !descriptions.has(mine.start)) blocked.push(mine);
+  const skipped = blocked.filter((window) => window.start !== mine?.start && top && window.mean < top.mean)
+    .sort((a, b) => a.mean - b.mean || a.start - b.start)[0] ?? null;
+
+  let outcome = 'unavailable';
+  if (mine && !mineBlocked && cmp?.relation !== 'better') outcome = 'keep';
+  else if (top) outcome = mine ? 'switch' : 'suggest';
+  else if (blocked.length) outcome = 'none';
+
+  return { mine, mineBlocked, suggestions, top, cmp, outcome, blocked, skipped, worstSuitable, hasAlternatives: alternatives.length > 0 };
 }

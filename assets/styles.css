@@ -1586,6 +1586,19 @@ pre {
   background: var(--accent-soft);
   border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
 }
+.planner-entry .verdict-card--pending {
+  background: color-mix(in srgb, var(--data-paper) 80%, var(--surface));
+  border-color: var(--data-edge);
+  border-inline-start-width: 4px;
+}
+.planner-entry .verdict-card--caution {
+  background: color-mix(in srgb, var(--caution) 13%, var(--planner-paper));
+  border-color: color-mix(in srgb, var(--caution) 65%, var(--line));
+  border-inline-start-width: 4px;
+}
+.verdict-card--caution > .cond { margin-top: 10px; }
+.option button:disabled { opacity: 0.72; cursor: default; }
+
 .verdict-card__title {
   font-family: var(--display);
   font-size: clamp(19px, 2.2vw, 25px);

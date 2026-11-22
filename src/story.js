@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 // Kết thúc thay đổi theo dữ liệu: có hôm nên dời giờ, có hôm cứ giữ giờ cũ.
 
 import { LEVELS, levelForAqi, levelForPm25 } from './aqi.js';
-import { compareWithPlan, findBestWindows, windowStats } from './planner.js';
+import { decideOutdoorPlan } from './conditions.js';
 import { MOOD, renderScene } from './scene.js';
 import { addDays, datePart, friendlyClock, hourOf } from './time.js';
 
@@ -29,12 +29,10 @@ export function buildStory(series) {
   const day = addDays(today, 1);
   const planStart = series.times.indexOf(`${day}T${String(STORY_PLAN_HOUR).padStart(2, '0')}:00`);
   if (planStart < 0) return null;
-  const plan = windowStats(series.pm25, planStart, 1);
-  if (!plan) return null;
-  const { best } = findBestWindows(series, { scope: 'tomorrow', ranges: STORY_FREE, hours: 1 }, 3);
-  const top = best.find((w) => w.start !== planStart) ?? null;
-  const cmp = top ? compareWithPlan(plan, top) : null;
-  return { day, plan, top, cmp, outcome: cmp?.relation === 'better' ? 'switch' : 'keep' };
+  const decision = decideOutdoorPlan(series, { scope: 'tomorrow', ranges: STORY_FREE, hours: 1 }, planStart);
+  if (!decision.mine) return null;
+  const { mine: plan, top, cmp, outcome, mineBlocked } = decision;
+  return { day, plan, top, cmp, outcome, mineBlocked };
 }
 
 /** Lời kể và cảnh minh họa cho từng bước. */
@@ -69,7 +67,9 @@ export function storySlides(series, story, { place }) {
         from: plan,
         to: { hour: topHour, pm25: story.top.mean },
         labels: [planTime, friendlyClock(topHour)],
-        text: t`ClearHour gợi ý dời sang ${friendlyClock(topHour)}: bụi mịn dự báo ít hơn khoảng ${story.cmp.pct}%.`,
+        text: story.mineBlocked
+          ? t`Giờ chạy quen thuộc có cảnh báo. ClearHour gợi ý Minh chuyển sang ${friendlyClock(topHour)}.`
+          : t`ClearHour gợi ý dời sang ${friendlyClock(topHour)}: bụi mịn dự báo ít hơn khoảng ${story.cmp.pct}%.`,
       },
       {
         art: 'scene',
@@ -80,6 +80,11 @@ export function storySlides(series, story, { place }) {
         cta: true,
       },
     );
+  } else if (story.outcome === 'none') {
+    slides.push(
+      { art: 'scene', ...plan, text: t('Những giờ Minh rảnh đều có cảnh báo mức nên tránh, nên ClearHour chưa gợi ý giờ chạy.') },
+      { art: 'scene', ...plan, text: t('Minh chọn tập trong nhà và sẽ xem lại dự báo cho ngày khác.'), cta: true },
+    );
   } else {
     slides.push(
       {
@@ -88,7 +93,7 @@ export function storySlides(series, story, { place }) {
         bubble: t('Giữ giờ cũ thôi!'),
         text: story.top
           ? t`Hóa ra ${planTime} đã gần như là lúc ít bụi nhất trong những giờ Minh rảnh. Đổi giờ cũng không đỡ được bao nhiêu.`
-          : t`Trong những giờ Minh rảnh, không có lúc nào ít bụi hơn ${planTime}.`,
+          : t`${planTime} là giờ ít bụi nhất trong các khung phù hợp với lịch của Minh.`,
       },
       {
         art: 'scene',
@@ -166,7 +171,7 @@ function artFor(slide, figure, k) {
  * Mở câu chuyện toàn màn hình.
  * opts: { series, place, sample, figure, onFinish }
  */
-export function openStory({ series, place, sample, figure = '🏃', onFinish }) {
+export function openStory({ series, place, sample, weatherUnavailable = false, figure = '🏃', onFinish }) {
   const story = buildStory(series);
   if (!story) return;
   const slides = storySlides(series, story, { place });
@@ -185,6 +190,7 @@ export function openStory({ series, place, sample, figure = '🏃', onFinish }) 
     sample
       ? t('Câu chuyện đang dùng dữ liệu mẫu của Hà Nội.')
       : t`Câu chuyện dùng dự báo thật của ${place} cho ngày mai, nên mỗi ngày một khác.`,
+    weatherUnavailable ? t(' Chưa có dự báo thời tiết cho câu chuyện này.') : null,
   );
   const close = () => {
     document.removeEventListener('keydown', onKey);

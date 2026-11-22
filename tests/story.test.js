@@ -58,3 +58,14 @@ test('không có dữ liệu ngày mai thì không kể chuyện', () => {
   const s = makeSeries([flat(30)]);
   assert.equal(buildStory(s), null);
 });
+
+test('Minh bỏ buổi chạy ngoài trời khi tất cả giờ rảnh đều có ozone cao', () => {
+  const s = makeSeries([flat(30), flat(15), flat(30)]);
+  s.o3 = s.times.map(() => 320);
+  const story = buildStory(s);
+  assert.equal(story.outcome, 'none');
+  assert.equal(story.top, null);
+  const slides = storySlides(s, story, { place: 'Hà Nội' });
+  assert.equal(slides.length, 5);
+  assert.match(slides[4].text, /trong nhà/);
+});

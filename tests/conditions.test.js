@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { aqiFromConcentration, combinedAqi } from '../src/aqi.js';
 import { alignWeather } from '../src/api.js';
-import { conditionFlags, hasAvoid, windowConditions, withConditions } from '../src/conditions.js';
+import { conditionFlags, decideOutdoorPlan, hasAvoid, windowConditions, withConditions } from '../src/conditions.js';
 import { evaluateSlot, findBestWindows, windowStats } from '../src/planner.js';
 
 test('AQI giờ của O3 theo Bảng 2, QĐ 1459/QĐ-TCMT', () => {
@@ -55,7 +55,7 @@ test('khung gắn điều kiện: AQI lấy lớn nhất giữa bụi mịn và 
   assert.equal(windowConditions({ times: s.times, pm25: s.pm25 }, 8, 2).o3, null);
 });
 
-test('bỏ qua giờ dễ mưa, nhưng nếu giờ nào cũng mưa thì vẫn đề xuất', () => {
+test('bỏ qua giờ dễ mưa, kể cả khi mọi giờ đều có cảnh báo', () => {
   const pm = Array(24).fill(40);
   pm[7] = 10; // giờ ít bụi nhất lại đang mưa
   pm[9] = 20;
@@ -71,8 +71,8 @@ test('bỏ qua giờ dễ mưa, nhưng nếu giờ nào cũng mưa thì vẫn đ
 
   const allRain = day(pm, { weather: { rainProb: Array(24).fill(90) } });
   const r2 = findBestWindows(allRain, { ...opts, exclude: (w) => hasAvoid(withConditions(allRain, w).flags) }, 3);
-  assert.equal(r2.best[0].start, 7);
-  assert.equal(r2.excluded, 0);
+  assert.deepEqual(r2.best, []);
+  assert.equal(r2.excluded, 17);
 });
 
 test('đánh giá ca học tính cả ozone', () => {
@@ -82,4 +82,38 @@ test('đánh giá ca học tính cả ozone', () => {
   const slot = { from: '07:00', to: '12:00' };
   const v = evaluateSlot(s, '2026-11-01', slot, 'school');
   assert.ok(v.aqi >= 150, `aqi ${v.aqi}`);
+});
+
+test('giờ định đi có ozone cao thì chọn giờ phù hợp dù PM2.5 cao hơn', () => {
+  const pm25 = Array(24).fill(30);
+  const o3 = Array(24).fill(40);
+  pm25[7] = 15;
+  pm25[9] = 20;
+  o3[7] = 320;
+  const plan = decideOutdoorPlan(day(pm25, { o3 }), { scope: 'today', ranges: [{ from: 5, to: 10 }], hours: 1 }, 7);
+  assert.equal(plan.outcome, 'switch');
+  assert.equal(plan.mineBlocked, true);
+  assert.equal(plan.top.start, 9);
+  assert.equal(plan.cmp.relation, 'worse');
+});
+
+test('không đổi sang khung bụi cao khi tất cả lựa chọn đều có cảnh báo mức nên tránh', () => {
+  const pm25 = Array(24).fill(150);
+  const o3 = Array(24).fill(40);
+  pm25[7] = 15;
+  o3[7] = 320;
+  const opts = { scope: 'today', ranges: [{ from: 5, to: 10 }], hours: 1 };
+  const plan = decideOutdoorPlan(day(pm25, { o3 }), opts, 7);
+  assert.equal(plan.outcome, 'none');
+  assert.equal(plan.top, null);
+  assert.deepEqual(plan.suggestions, []);
+  assert.equal(decideOutdoorPlan(day(pm25, { o3 }), opts).outcome, 'none');
+});
+
+test('giữ lịch nếu giờ định đi phù hợp và chênh lệch bụi không đáng kể', () => {
+  const pm25 = Array(24).fill(21);
+  pm25[9] = 20;
+  const plan = decideOutdoorPlan(day(pm25), { scope: 'today', ranges: [{ from: 5, to: 10 }], hours: 1 }, 7);
+  assert.equal(plan.outcome, 'keep');
+  assert.equal(plan.cmp.relation, 'same');
 });

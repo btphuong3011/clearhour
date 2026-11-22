@@ -78,7 +78,7 @@ export function candidateStarts(series, { scope = 'today', fromHour = 5, toHour 
 /**
  * Tìm `count` khung giờ có nồng độ PM2.5 trung bình thấp nhất, kèm khung tệ nhất để so sánh.
  * Các khung gợi ý cách nhau ít nhất 2 giờ để người dùng có những lựa chọn thật sự khác nhau.
- * opts.exclude(w): bỏ qua khung không nên đề xuất (mưa, nắng nóng gay gắt…), trừ khi không còn khung nào khác.
+ * opts.exclude(w): loại khung không nên đề xuất, kể cả khi không còn khung nào khác.
  */
 export function findBestWindows(series, opts, count = 3) {
   const ventilation = opts.ventilation ?? 1;
@@ -88,8 +88,8 @@ export function findBestWindows(series, opts, count = 3) {
   if (!all.length) return { best: [], worst: null, all, excluded: 0 };
 
   const pool = opts.exclude ? all.filter((w) => !opts.exclude(w)) : all;
-  const excluded = pool.length ? all.length - pool.length : 0;
-  const sorted = [...(pool.length ? pool : all)].sort((a, b) => a.mean - b.mean || a.start - b.start);
+  const excluded = all.length - pool.length;
+  const sorted = [...pool].sort((a, b) => a.mean - b.mean || a.start - b.start);
   const gap = Math.ceil(opts.hours) + 2;
   const best = [];
   for (const w of sorted) {
