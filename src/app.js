@@ -475,9 +475,9 @@ function lookBackNote(mine) {
   } else if (planHour == null) {
     text = t`Nhìn lại ${r.days} ngày qua: lúc ít bụi nhất trong những giờ bạn rảnh đổi theo từng ngày, hay gặp nhất là ${friendlyClock(r.usualHour)} (chỉ ${r.usualCount}/${r.days} ngày). Vì vậy nên xem dự báo mỗi ngày.`;
   } else if (r.worth && r.pct > 0) {
-    text = t`Nhìn lại ${r.days} ngày qua: nếu hôm nào cũng làm theo gợi ý đổi giờ thay vì luôn đi lúc ${friendlyClock(planHour)}, bạn sẽ hít ít bụi mịn hơn khoảng ${r.pct}%. Có ${r.worth}/${r.days} ngày đáng đổi giờ.`;
+    text = t`Nhìn lại ${r.days} ngày qua: so với luôn đi lúc ${friendlyClock(planHour)}, chọn giờ chỉ dựa trên bụi mịn có thể giảm khoảng ${r.pct}% PM2.5 trung bình. Có ${r.worth}/${r.days} ngày mức giảm đủ lớn.`;
   } else {
-    text = t`Nhìn lại ${r.days} ngày qua: ${friendlyClock(planHour)} hầu như luôn là lúc ít bụi trong những giờ bạn rảnh, không cần đổi giờ.`;
+    text = t`Nhìn lại ${r.days} ngày qua: dự báo PM2.5 tại ${friendlyClock(planHour)} thường gần với mức thấp nhất trong những giờ bạn rảnh.`;
   }
   return el(
     'p',
@@ -879,7 +879,10 @@ function renderPlanner() {
     out.push(el('a', { class: 'planner__chart-link', href: '#bieu-do', onclick: () => { $('chart-fold').open = true; } }, t('Xem các khung giờ trên biểu đồ ↓')));
   }
 
-  out.push(lookBackNote(mine));
+  const retrospective = lookBackNote(mine);
+  if (retrospective) {
+    out.push(el('details', { class: 'more' }, el('summary', {}, t('Nhìn lại PM2.5')), retrospective));
+  }
 
   if (!pending && options.length > 1) {
     out.push(el(
@@ -953,7 +956,13 @@ function verdictCard({ mine, mineBlocked, top, cmp, outcome, blocked, worstSuita
     title = t('Chưa có giờ phù hợp trong khoảng bạn rảnh');
     sub = t('Các khung có dữ liệu đều có cảnh báo mức nên tránh. Thử chọn ngày khác hoặc cân nhắc hoạt động trong nhà.');
     tone = ' verdict-card--caution';
-    const reasons = new Map(blocked.flatMap((w) => w.flags.filter((f) => f.severity === 'avoid').map((f) => [f.id, f])));
+    const visibleReasons = new Set(mine?.flags.filter((f) => f.severity === 'avoid').map((f) => f.id));
+    const reasons = new Map();
+    for (const window of blocked) {
+      for (const flag of window.flags) {
+        if (flag.severity === 'avoid' && !visibleReasons.has(flag.id)) reasons.set(flag.id, flag);
+      }
+    }
     flags = flagChips([...reasons.values()]);
   } else if (outcome === 'switch') {
     title = t`Nên dời sang ${switchTime.day} ${switchTime.range}`;
