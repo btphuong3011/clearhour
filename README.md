@@ -107,8 +107,6 @@ Workflow [Capture ClearHour forecast](.github/workflows/forecast-archive.yml) l�
 
 Trên Chrome, dùng nút **Cài ClearHour** khi trình duyệt hiện tùy chọn cài. Trên Safari iPhone, mở menu Chia sẻ và chọn **Thêm vào màn hình chính**. Sau lần mở trực tuyến đầu tiên, ClearHour có thể mở lại với dữ liệu mẫu Hà Nội khi không tải được dự báo. Bản lưu số đo và hệ số hiệu chỉnh có ghi thời điểm cập nhật khi được dùng từ bộ nhớ đệm.
 
-Ảnh nền TP.HCM và Đà Nẵng là minh họa tạo bằng ImageGen cho hai địa danh sông Sài Gòn và cầu Rồng.
-
 ## Chạy trên máy
 
 Không cần build, không cần thư viện. Chỉ cần một web server tĩnh (vì dùng ES modules):
@@ -183,6 +181,14 @@ tests/                      Unit test (node:test)
 - Ngưỡng tham chiếu: WHO Global Air Quality Guidelines (2021) – PM2.5 trung bình 24 giờ 15 µg/m³.
 - Số liệu bối cảnh: YDCC 2026 Booklet (UNDP Việt Nam).
 
+### Ảnh chụp trên trang đầu
+
+- Hà Nội · [Tháp Rùa ở Hà Nội](https://commons.wikimedia.org/wiki/File:Th%C3%A1p_R%C3%B9a_%E1%BB%9F_H%C3%A0_N%E1%BB%99i.jpg), Bùi Thụy Đào Nguyên ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)).
+- TP.HCM · [Saigon skyline night view](https://commons.wikimedia.org/wiki/File:Saigon_skyline_night_view.jpg), Gurval Le Bouter ([CC BY 2.0](https://creativecommons.org/licenses/by/2.0/)).
+- Đà Nẵng · [Cầu Rồng](https://commons.wikimedia.org/wiki/File:C%E1%BA%A7u_R%E1%BB%93ng.jpg), Bùi Thụy Đào Nguyên ([CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)).
+
+Ba ảnh được thu kích thước và chuyển sang WebP. Giao diện hiển thị khung cắt theo màn hình, với lớp tối phía sau chữ. Các bản WebP giữ giấy phép của ảnh nguồn.
+
 ---
 
 ## English summary
@@ -191,4 +197,4 @@ tests/                      Unit test (node:test)
 
 ## Giấy phép
 
-MIT © 2026 [btphuong3011](https://github.com/btphuong3011)
+Mã nguồn: MIT © 2026 [btphuong3011](https://github.com/btphuong3011)

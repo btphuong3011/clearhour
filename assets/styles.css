@@ -259,8 +259,6 @@ p {
 
 /* ---------- Thành phố theo giờ ---------- */
 .intro {
-  --scene-wash: #bd7537;
-  --scene-haze: 0.08;
   isolation: isolate;
   position: relative;
   overflow: hidden;
@@ -269,7 +267,6 @@ p {
   color-scheme: dark;
 }
 .intro__art,
-.intro::before,
 .intro::after {
   position: absolute;
   inset: 0;
@@ -279,22 +276,24 @@ p {
 }
 .intro__art {
   object-fit: cover;
-  object-position: 68% 57%;
-  z-index: -3;
-}
-.intro::before {
-  content: '';
+  object-position: 50% 55%;
   z-index: -2;
-  background: linear-gradient(90deg, #0b211c 0%, var(--scene-wash) 100%);
-  mix-blend-mode: multiply;
-  opacity: var(--scene-haze);
-  transition: background 0.5s, opacity 0.5s;
+}
+.intro[data-landmark="hcm"] { background: #102126; }
+.intro[data-landmark="danang"] .intro__art { object-position: 55% 58%; }
+@media (min-width: 641px) {
+  .intro[data-landmark="hcm"] .intro__art {
+    left: 47%;
+    width: 53%;
+    object-position: 9% center;
+    mask-image: linear-gradient(to right, transparent, #000 24%);
+  }
 }
 .intro::after {
   content: '';
   z-index: -1;
-  background: linear-gradient(90deg, #0b1b1adb 0%, #0b1b1a80 42%, transparent 80%),
-    linear-gradient(0deg, #071711d9, transparent 47%);
+  background: linear-gradient(90deg, #0b1b1ae6, #0b1b1a9e 38%, transparent 77%),
+    linear-gradient(0deg, #071711c9, transparent 42%);
 }
 .intro__inner {
   min-height: min(700px, 85svh);
@@ -371,6 +370,8 @@ p {
   font-size: 13px;
   color: #fff2d5;
 }
+.intro__credit { display: block; }
+.intro__credit a { color: inherit; text-underline-offset: 3px; }
 .hour-dial {
   padding: 13px 18px;
   background: #161f17ec;
@@ -1507,10 +1508,12 @@ pre {
     padding-top: 64px;
     padding-bottom: 18px;
   }
-  .intro__art { object-position: 62% center; }
-  .intro:is([data-landmark="hcm"], [data-landmark="danang"]) .intro__art { object-position: 82% center; }
+  .intro__art { object-position: 49% center; }
+  .intro[data-landmark="hcm"] .intro__art { object-position: 7% center; }
+  .intro[data-landmark="danang"] .intro__art { object-position: 83% center; }
   .intro::after {
-    background: linear-gradient(115deg, #071d1df5, #0c1e1b88 64%, #0b1c14ac);
+    background: linear-gradient(180deg, #071d1df0, #0c1e1b8a 38%, transparent 71%),
+      linear-gradient(0deg, #071711d4, transparent 54%);
   }
   .intro h1 { font-size: clamp(41px, 11.5vw, 68px); }
   .intro__lead { max-width: 32ch; }
@@ -1538,7 +1541,7 @@ pre {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  main.is-loading .card, .intro::before { transition: none; }
+  main.is-loading .card { transition: none; }
 }
 
 /* Distinguish decisions, observations and longer forecasts at a glance. */
@@ -1825,7 +1828,6 @@ body.has-story {
   }
 }
 
-.intro__art { filter: var(--scene-filter, none); transition: filter 0.45s ease; }
 .hour-dial__action {
   margin-top: 5px;
   padding: 4px 0;
@@ -1854,7 +1856,6 @@ body.has-story {
   .duel__pm .pill { width: fit-content; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .intro__art { transition: none; }
 }
 
 /* Tint each tool by its setting: outdoor air, data, home and the schoolyard. */

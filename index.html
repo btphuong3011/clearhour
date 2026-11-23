@@ -16,8 +16,8 @@
       data-en-content="Compare hourly PM2.5 forecasts to find a better outdoor time that fits your schedule."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://btphuong3011.github.io/clearhour/assets/hoan-kiem.webp" />
-    <meta property="og:image:alt" content="Minh họa Hồ Hoàn Kiếm dưới ánh chiều" data-en-content="Illustration of Hoan Kiem Lake in the evening" />
+    <meta property="og:image" content="https://btphuong3011.github.io/clearhour/assets/hoan-kiem-photo.webp" />
+    <meta property="og:image:alt" content="Ảnh Tháp Rùa và Hồ Hoàn Kiếm, Hà Nội" data-en-content="Photo of Turtle Tower and Hoan Kiem Lake in Hanoi" />
     <meta name="theme-color" content="#171d13" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="assets/icon-192.png" />
@@ -77,8 +77,8 @@
     </header>
 
     <main id="app">
-      <section class="intro" id="city-scene" aria-labelledby="intro-title">
-        <img class="intro__art" id="intro-art" src="assets/hoan-kiem.webp" width="1440" height="960" alt="" fetchpriority="high" />
+      <section class="intro" id="city-scene" data-landmark="hanoi" aria-labelledby="intro-title">
+        <img class="intro__art" id="intro-art" src="assets/hoan-kiem-photo.webp" width="1800" height="1200" alt="" fetchpriority="high" />
         <div class="wrap intro__inner">
           <div class="intro__copy">
             <p class="intro__eyebrow"><span aria-hidden="true"></span><span data-en="Hourly air quality">Chất lượng không khí theo giờ</span></p>
@@ -89,7 +89,13 @@
               <a class="intro__link" href="?demo=hanoi#ca-nhan" data-app-link><span data-en="Try the Hanoi demo">Thử tình huống Hà Nội</span> <span aria-hidden="true">↗</span></a>
             </div>
           </div>
-          <p class="intro__caption" id="intro-caption" data-en="Hoan Kiem Lake, Hanoi · Illustration">Hồ Hoàn Kiếm, Hà Nội · Ảnh minh họa</p>
+          <p class="intro__caption">
+            <span id="intro-caption" data-en="Hoan Kiem Lake, Hanoi">Hồ Hoàn Kiếm, Hà Nội</span>
+            <span class="intro__credit"><span data-en="Photo by">Ảnh của</span>
+              <a id="intro-author" href="https://commons.wikimedia.org/wiki/File:Th%C3%A1p_R%C3%B9a_%E1%BB%9F_H%C3%A0_N%E1%BB%99i.jpg">Bùi Thụy Đào Nguyên</a> ·
+              <a id="intro-license" href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>
+            </span>
+          </p>
           <div class="hour-dial">
             <div class="hour-dial__head">
               <label for="scene-hour" data-en="Explore hourly PM2.5">Xem bụi mịn theo giờ</label>

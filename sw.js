@@ -11,7 +11,7 @@ const dataAges = new Map([
 const shellFiles = [
   'index.html', 'manifest.webmanifest',
   'assets/styles.css', 'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png',
-  'assets/hoan-kiem.webp', 'assets/saigon-river.webp', 'assets/dragon-bridge.webp', 'assets/hanoi-run.webp', 'assets/hanoi-window.webp', 'assets/school-courtyard.webp',
+  'assets/hoan-kiem-photo.webp', 'assets/saigon-river-photo.webp', 'assets/dragon-bridge-photo.webp', 'assets/hanoi-run.webp', 'assets/hanoi-window.webp', 'assets/school-courtyard.webp',
   'assets/fonts/lexend-vi.woff2', 'assets/fonts/lexend-latin.woff2',
   'assets/fonts/source-sans-3-vi.woff2', 'assets/fonts/source-sans-3-latin.woff2',
   'data/sample-hanoi.json',

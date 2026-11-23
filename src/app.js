@@ -67,9 +67,24 @@ const CHART_RANGES = [
 ];
 const STATUS_ICON = { ok: '✅', caution: '⚠️', stop: '⛔' };
 const SCENE_ART = {
-  hanoi: { file: 'hoan-kiem.webp', caption: t('Hồ Hoàn Kiếm, Hà Nội · Ảnh minh họa') },
-  hcm: { file: 'saigon-river.webp', caption: t('Sông Sài Gòn, TP. Hồ Chí Minh · Ảnh minh họa') },
-  danang: { file: 'dragon-bridge.webp', caption: t('Cầu Rồng, Đà Nẵng · Ảnh minh họa') },
+  hanoi: {
+    file: 'hoan-kiem-photo.webp', caption: t('Hồ Hoàn Kiếm, Hà Nội'),
+    author: 'Bùi Thụy Đào Nguyên', license: 'CC BY-SA 4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Th%C3%A1p_R%C3%B9a_%E1%BB%9F_H%C3%A0_N%E1%BB%99i.jpg',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+  },
+  hcm: {
+    file: 'saigon-river-photo.webp', caption: t('Sông Sài Gòn, TP. Hồ Chí Minh'),
+    author: 'Gurval Le Bouter', license: 'CC BY 2.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Saigon_skyline_night_view.jpg',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+  },
+  danang: {
+    file: 'dragon-bridge-photo.webp', caption: t('Cầu Rồng, Đà Nẵng'),
+    author: 'Bùi Thụy Đào Nguyên', license: 'CC BY-SA 3.0',
+    source: 'https://commons.wikimedia.org/wiki/File:C%E1%BA%A7u_R%E1%BB%93ng.jpg',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+  },
 };
 const DEFAULT_FREE = '5-22';
 const NEW_SLOT_NAME = 'Hoạt động mới';
@@ -348,11 +363,26 @@ function shareUrl(w) {
 
 let loadVersion = 0;
 
+function renderScenePhoto(cityId) {
+  const landmark = Object.hasOwn(SCENE_ART, cityId) ? cityId : 'hanoi';
+  const scene = $('city-scene');
+  if (scene.dataset.landmark === landmark) return;
+  const photo = SCENE_ART[landmark];
+  $('intro-art').src = 'assets/' + photo.file;
+  $('intro-caption').textContent = photo.caption;
+  $('intro-author').textContent = photo.author;
+  $('intro-author').href = photo.source;
+  $('intro-license').textContent = photo.license;
+  $('intro-license').href = photo.licenseUrl;
+  scene.dataset.landmark = landmark;
+}
+
 async function load() {
   const version = ++loadVersion;
   const main = $('app');
   const banner = $('banner');
   const city = place();
+  renderScenePhoto(city.id);
   main.classList.add('is-loading');
   $('scene-hour').disabled = true;
   $('scene-source').textContent = t('Đang tải dữ liệu…');
@@ -386,12 +416,7 @@ async function load() {
   }
   if (version !== loadVersion) return;
 
-  const landmark = series.source !== 'sample' && Object.hasOwn(SCENE_ART, city.id) ? city.id : 'hanoi';
-  const { file, caption } = SCENE_ART[landmark];
-  const art = 'assets/' + file;
-  if ($('intro-art').getAttribute('src') !== art) $('intro-art').setAttribute('src', art);
-  $('intro-caption').textContent = caption;
-  $('city-scene').dataset.landmark = landmark;
+  if (series.source === 'sample') renderScenePhoto('hanoi');
   state.rawSeries = series;
   state.weatherStatus = series.source === 'sample' ? 'sample' : 'loading';
   if (series.source === 'sample') Object.assign(state, { history: null, historyKey: null });
@@ -536,12 +561,6 @@ function renderScene() {
   const time = formatClock(hour);
   const index = s.times.indexOf(`${day}T${time}`);
   const value = s.pm25[index];
-  const scene = $('city-scene');
-  const light = hour < 6 || hour >= 20 ? 'night' : hour >= 16 ? 'sunset' : 'day';
-  const [wash, haze] = { night: ['#223e87', 0.72], sunset: ['#c26a34', 0.12], day: ['#87c9bc', 0.34] }[light];
-  scene.style.setProperty('--scene-wash', wash);
-  scene.style.setProperty('--scene-haze', haze);
-  scene.style.setProperty('--scene-filter', { night: 'brightness(.65) saturate(.78)', day: 'brightness(1.12) saturate(.85)', sunset: 'none' }[light]);
   $('scene-time').value = time;
   $('scene-pm').textContent = num(value);
   $('scene-source').textContent = `${placeName()} · ${shortDate(day)} · ${isSample() ? t('Dữ liệu mẫu') : t('Mô hình CAMS')}`;
