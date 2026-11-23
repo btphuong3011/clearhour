@@ -19,6 +19,8 @@
     <meta property="og:image" content="https://btphuong3011.github.io/clearhour/assets/hoan-kiem.webp" />
     <meta property="og:image:alt" content="Minh họa Hồ Hoàn Kiếm dưới ánh chiều" data-en-content="Illustration of Hoan Kiem Lake in the evening" />
     <meta name="theme-color" content="#171d13" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="assets/icon-192.png" />
     <script>
       try {
         const theme = JSON.parse(localStorage.getItem('clearhour:theme'));
@@ -76,7 +78,7 @@
 
     <main id="app">
       <section class="intro" id="city-scene" aria-labelledby="intro-title">
-        <img class="intro__art" src="assets/hoan-kiem.webp" width="1440" height="960" alt="" fetchpriority="high" />
+        <img class="intro__art" id="intro-art" src="assets/hoan-kiem.webp" width="1440" height="960" alt="" fetchpriority="high" />
         <div class="wrap intro__inner">
           <div class="intro__copy">
             <p class="intro__eyebrow"><span aria-hidden="true"></span><span data-en="Hourly air quality">Chất lượng không khí theo giờ</span></p>
@@ -121,6 +123,8 @@
             <p id="updated" class="locbar__meta" aria-live="polite"></p>
           </div>
           <div id="banner" class="banner" role="status" hidden></div>
+          <p id="cached-stations" class="banner small" role="status" hidden></p>
+          <p id="cached-accuracy" class="banner small" role="status" hidden></p>
           <div id="shared-plan" class="shared-plan" hidden></div>
 
           <div class="grid">
@@ -330,6 +334,10 @@
             <article class="card accuracy" id="accuracy-card" aria-live="polite">
               <h3 data-en="How accurate is the forecast?">Dự báo đúng đến đâu?</h3>
             </article>
+            <article class="card accuracy benchmark" id="decision-benchmark">
+              <h3 data-en="Was it worth changing the time? · Hanoi pilot">Đổi giờ có đáng không? · Thử nghiệm tại Hà Nội</h3>
+              <p data-en="ClearHour is collecting archived forecasts and station readings to check whether switching times lowers PM2.5.">ClearHour đang lưu bản dự báo và thu thập số đo trạm để kiểm tra đổi giờ có giúp giảm tiếp xúc với PM2.5 hay không.</p>
+            </article>
           </div>
         </section>
       </div>
@@ -340,6 +348,10 @@
         <p><span data-en="Competition demo for">Bản demo dự thi</span> <strong>Youth Digital Citizen Challenge 2026</strong> · Urban Air-chitects.
           <a href="https://github.com/btphuong3011/clearhour" rel="noopener"><span data-en="Source on GitHub">Mã nguồn trên GitHub</span></a>.
         </p>
+        <div class="pwa-actions">
+          <button type="button" id="install-app" class="btn btn--sm" hidden data-en="Install ClearHour">Cài ClearHour</button>
+          <button type="button" id="update-app" class="btn btn--sm" hidden data-en="Load the new version">Tải phiên bản mới</button>
+        </div>
         <p class="small"><span data-en="Forecast:">Dự báo:</span> <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> / CAMS. <span data-en="Station readings:">Số đo trạm:</span> <a href="https://openaq.org/" rel="noopener">OpenAQ</a>. <span data-en="VN_AQI follows Decision 1459/QĐ-TCMT. WHO reference values follow the 2021 Global Air Quality Guidelines. Breathing-rate estimates use the US EPA Exposure Factors Handbook.">VN_AQI theo Quyết định 1459/QĐ-TCMT. Ngưỡng của WHO theo Hướng dẫn chất lượng không khí (2021). Ước tính lượng không khí hít vào dựa trên Sổ tay hệ số phơi nhiễm của US EPA.</span></p>
       </div>
     </footer>

@@ -92,10 +92,22 @@ Giao diện ưu tiên lời nói thường ngày hơn con số: giờ ghi kiểu
 Workflow [Capture ClearHour forecast](.github/workflows/forecast-archive.yml) lấy dữ liệu cho 12 thành phố mỗi 6 giờ và ghi từng bản vào [nhánh `forecast-archive`](https://github.com/btphuong3011/clearhour/tree/forecast-archive/snapshots). Kho nằm riêng với bản triển khai GitHub Pages.
 
 - Mỗi bản ghi giữ thời điểm lấy dữ liệu UTC, tọa độ thành phố, ô lưới và giờ dự báo, phiên bản mã, dữ liệu PM2.5/PM10/O₃, thời tiết và thông số hiệu chỉnh đã công bố khi có thể tải được.
-- Thời điểm lưu dùng để tính khoảng cách tới giờ cần kiểm chứng. Mốc này là lúc ClearHour truy cập API. Giờ dự báo có hiệu lực và giờ mô hình khởi chạy là hai thông tin khác.
+- Kho ghi lúc bắt đầu truy cập API và lúc nhận xong các nguồn. Bộ chấm dùng mốc dữ liệu có sẵn; các bản lưu cũ dùng giờ truy cập API. Hai mốc này khác giờ dự báo có hiệu lực và giờ mô hình khởi chạy.
 - Mất dữ liệu thời tiết hoặc hiệu chỉnh được ghi rõ trong bản lưu. Nếu thiếu dự báo không khí, workflow báo lỗi và không tạo bản ghi rỗng.
 
-Kho này dành cho đánh giá dự báo đã có tại thời điểm ra quyết định. Kết quả đối chiếu mỗi ngày trong app hiện được tính từ dữ liệu mô hình quá khứ và được ghi rõ phương pháp ở mục **Dự báo đúng đến đâu?**.
+### Kiểm chứng quyết định đổi giờ tại Hà Nội
+
+[scripts/decision-benchmark.mjs](scripts/decision-benchmark.mjs) phát lại các chuyến đi giả định kéo dài 1 giờ, định đi lúc 08:00, 12:00 hoặc 17:00 và có thể dời trong khoảng 06:00–22:00 cùng ngày. Mỗi mốc 6, 12 và 24 giờ trước giờ định đi dùng bản lưu gần nhất còn có sẵn lúc đó, tối đa cũ hơn mốc 6 giờ. Các giờ thay thế bắt đầu sau hoặc đúng thời điểm ra quyết định. Hai lần chạy dùng cùng quy tắc chọn giờ, một lần với dữ liệu hiệu chỉnh có tại thời điểm lưu và một lần với CAMS gốc.
+
+- Đối chiếu PM2.5 dự báo tại khu vực Hà Nội với số đo trung bình giờ tại trạm quan trắc Công viên Nhân Chính – Khuất Duy Tiến (OpenAQ 4946812). PM2.5 của CAMS là giá trị tại mốc giờ. Bộ chấm gom các mẫu 5 phút của trạm thành trung bình giờ theo quy ước giờ kết thúc của OpenAQ, chỉ nhận giờ có ít nhất 9 trong 12 mẫu dự kiến. Dữ liệu trạm công bố muộn, bộ chấm đợi tối thiểu 72 giờ sau khi ngày đo kết thúc.
+- Tỷ lệ quyết định đúng bằng số lần được khuyên đổi và thực tế giảm cả 3 µg/m³ lẫn 10%, chia cho số lần được khuyên đổi có đủ số đo ở hai khung. Các trường hợp gần tương đương, đổi bất lợi và thiếu dự báo hoặc số đo có số đếm riêng. Đây là phép kiểm chứng phần PM2.5 của kịch bản giả định. Khoảng cách từ một trạm đến nơi người dùng đi có thể ảnh hưởng kết quả.
+- App chỉ công bố tỷ lệ của từng mốc khi có ít nhất 20 lần đổi đủ số đo trên ít nhất 7 ngày khác nhau. Thử nghiệm dùng tối đa 28 ngày đủ độ trễ. Dữ liệu kiểm chứng hồi cứu dùng để hiệu chỉnh vẫn có mục riêng **Dự báo đúng đến đâu?**.
+
+### Cài và mở khi mất mạng
+
+Trên Chrome, dùng nút **Cài ClearHour** khi trình duyệt hiện tùy chọn cài. Trên Safari iPhone, mở menu Chia sẻ và chọn **Thêm vào màn hình chính**. Sau lần mở trực tuyến đầu tiên, ClearHour có thể mở lại với dữ liệu mẫu Hà Nội khi không tải được dự báo. Bản lưu số đo và hệ số hiệu chỉnh có ghi thời điểm cập nhật khi được dùng từ bộ nhớ đệm.
+
+Ảnh nền TP.HCM và Đà Nẵng là minh họa tạo bằng ImageGen cho hai địa danh sông Sài Gòn và cầu Rồng.
 
 ## Chạy trên máy
 
@@ -106,10 +118,12 @@ python -m http.server 5173
 # mở http://localhost:5173
 ```
 
-Chạy test (Node.js ≥ 18):
+Chạy kiểm thử với Node.js 22 và Chrome:
 
 ```bash
+npm ci
 npm test
+npm run test:browser
 ```
 
 ### Kết nối dữ liệu trạm đo (OpenAQ)

@@ -6,7 +6,12 @@
   "private": true,
   "scripts": {
     "start": "python -m http.server 5173",
-    "test": "node --test"
+    "test": "node --test",
+    "test:browser": "node tests/browser.mjs"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "acorn": "8.19.0",
+    "playwright": "1.65.1"
+  }
 }

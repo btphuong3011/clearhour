@@ -5,11 +5,12 @@ import { t } from './i18n.js';
 
 const STATIONS_URL = './data/stations.json';
 
-export async function fetchStations() {
+export async function fetchStations(onCached) {
   try {
     const res = await fetch(STATIONS_URL, { cache: 'no-cache' });
     if (!res.ok) return [];
     const doc = await res.json();
+    onCached?.(res.headers.get('X-ClearHour-Cached'));
     return Array.isArray(doc.stations) ? doc.stations : [];
   } catch {
     return [];

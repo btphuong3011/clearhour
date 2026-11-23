@@ -6,11 +6,12 @@ import { hourOf } from './time.js';
 
 const ACCURACY_URL = './data/accuracy.json';
 
-export async function fetchAccuracy() {
+export async function fetchAccuracy(onCached) {
   try {
     const res = await fetch(ACCURACY_URL, { cache: 'no-cache' });
     if (!res.ok) return null;
     const doc = await res.json();
+    onCached?.(res.headers.get('X-ClearHour-Cached'));
     return Array.isArray(doc.stations) && doc.stations.length ? doc : null;
   } catch {
     return null;

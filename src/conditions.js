@@ -66,6 +66,16 @@ export function conditionFlags(c, pmAqi = 0) {
 
 export const hasAvoid = (flags) => flags.some((f) => f.severity === 'avoid');
 
+/** Chỉ so theo PM2.5 khi mọi khung đều bị loại riêng vì bụi. */
+export function lowestDustWhenBlocked(windows) {
+  if (!windows.length || !windows.every((window) => {
+    const avoided = window.flags.filter((flag) => flag.severity === 'avoid');
+    return avoided.length === 1 && avoided[0].id === 'pm25';
+  })) return null;
+  return windows.reduce((best, window) => window.mean < best.mean ||
+    (window.mean === best.mean && window.start < best.start) ? window : best);
+}
+
 /**
  * Gắn điều kiện vào một khung đã tính bằng windowStats.
  * pmAqi giữ AQI của riêng bụi mịn; aqi thành giá trị lớn nhất giữa bụi mịn và ozone, đúng cách tính VN_AQI.

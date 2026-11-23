@@ -4,8 +4,9 @@ import { aqiFromConcentration, cigarettesPerDay, combinedAqi, LEVELS, levelForAq
 import { alignWeather, fetchAirQuality, fetchHistory, fetchSample, fetchWeather } from './api.js';
 import { downloadIcs, googleCalendarUrl, localToUtc } from './calendar.js';
 import { chartHourFlags, renderChart } from './chart.js';
-import { decideOutdoorPlan, describeOutdoorWindow, hasAvoid } from './conditions.js';
+import { decideOutdoorPlan, describeOutdoorWindow, hasAvoid, lowestDustWhenBlocked } from './conditions.js';
 import { CITIES } from './cities.js';
+import { renderDecisionBenchmark } from './decision-benchmark.js';
 import { el, int, num } from './format.js';
 import {
   ACTIVITIES,
@@ -24,6 +25,7 @@ import {
   ventilationPlan,
   windowStats,
 } from './planner.js';
+import { initPwa, showCachedDataNotice } from './pwa.js';
 import { buildStory, openStory } from './story.js';
 import { cleanGrid, cleanestHour, lookBack, slotHistory } from './history.js';
 import { ageText, compareWithModel, fetchStations, haversineKm, nearestStation, toLocalTime } from './stations.js';
@@ -64,6 +66,7 @@ const CHART_RANGES = [
   { id: 'all', label: t('72 giờ') },
 ];
 const STATUS_ICON = { ok: '✅', caution: '⚠️', stop: '⛔' };
+const SCENE_ART = { hcm: 'saigon-river.webp', danang: 'dragon-bridge.webp' };
 const DEFAULT_FREE = '5-22';
 const NEW_SLOT_NAME = 'Hoạt động mới';
 const PRESET_SLOT_NAMES = new Set([
@@ -379,6 +382,8 @@ async function load() {
   }
   if (version !== loadVersion) return;
 
+  const art = 'assets/' + (series.source === 'sample' || state.myPlace ? 'hoan-kiem.webp' : SCENE_ART[city.id] ?? 'hoan-kiem.webp');
+  if ($('intro-art').getAttribute('src') !== art) $('intro-art').setAttribute('src', art);
   state.rawSeries = series;
   state.weatherStatus = series.source === 'sample' ? 'sample' : 'loading';
   if (series.source === 'sample') Object.assign(state, { history: null, historyKey: null });
@@ -859,6 +864,7 @@ function renderPlanner() {
   $('plan-summary').textContent = `${act.short} · ${state.hours < 1 ? t('30 phút') : t`${state.hours} giờ`}`;
 
   const out = [verdictCard(decision, pending)];
+  if (!pending && outcome === 'none') out.push(requiredTrip(decision.blocked));
   if (state.weatherStatus === 'unavailable') {
     out.push(el('p', { class: 'status status--warn' }, t('Chưa tải được thời tiết. So sánh hiện dựa trên dữ liệu không khí; hãy kiểm tra mưa và nhiệt độ trước khi đi.')));
   }
@@ -932,6 +938,31 @@ function sideBox(tag, w, extraClass = '', scale = w.mean) {
 function flagChips(flags) {
   if (!flags?.length) return null;
   return el('span', { class: 'cond' }, ...flags.map((f) => el('span', { class: `cond__chip cond__chip--${f.severity}` }, `${f.icon} ${f.label}`)));
+}
+
+function requiredTrip(blocked) {
+  const option = state.weatherStatus === 'unavailable' ? null : lowestDustWhenBlocked(blocked);
+  const warnings = el('details', { class: 'more required-trip__details' },
+    el('summary', {}, t('Xem cảnh báo theo từng khung giờ')),
+    el('ul', { class: 'required-trip__list' }, ...[...blocked].sort((a, b) => a.start - b.start).map((window) =>
+      el('li', {}, el('strong', {}, absoluteLabel(window)),
+        `PM2.5 ${num(window.mean)} µg/m³`, flagChips(window.flags)),
+    )),
+  );
+  const halfHour = option && option.hours > 0.5 ? windowStats(state.series.pm25, option.start, 0.5) : null;
+  const reduction = halfHour && option ? reductionPct(halfHour.dose, option.mean * option.hours) : 0;
+  return el('aside', { class: 'required-trip' },
+    el('h3', {}, t('Nếu bắt buộc phải ra ngoài')),
+    option ? el('p', {},
+      el('strong', {}, absoluteLabel(option)),
+      t` có PM2.5 dự báo thấp nhất trong các khung trên (${num(option.mean)} µg/m³). Mức bụi vẫn cao.`,
+      flagChips(option.flags),
+    ) : el('p', {}, t('Xem lý do cảnh báo ở từng khung để cân nhắc. Ưu tiên rút ngắn thời gian ở ngoài nếu có thể.')),
+    reduction ? el('p', { class: 'small' },
+      t`Nếu có thể rút xuống 30 phút từ cùng giờ bắt đầu, mức tiếp xúc với PM2.5 ước tính giảm ${reduction}% so với thời lượng đã chọn, với cùng cường độ hoạt động.`,
+    ) : null,
+    warnings,
+  );
 }
 
 function verdictCard({ mine, mineBlocked, top, cmp, outcome, blocked, worstSuitable, hasAlternatives }, pending) {
@@ -1163,7 +1194,7 @@ function renderVentilation() {
   );
 
   $('vent-tip').textContent =
-    (profile.sensitive ? t`Nhà có ${profile.short.toLowerCase()}: chỉ nên mở cửa trong các giờ màu xanh. ` : '') +
+    (profile.sensitive ? t("Nếu trong nhà có người nhạy cảm với ô nhiễm, ưu tiên thông gió vào các giờ được ghi «Có thể mở cửa». ") : '') +
     t('Khi mở, mở hai cửa đối diện 10–15 phút để không khí lưu thông nhanh. Khi đóng, hạn chế đốt nhang và chiên rán, bật máy lọc có màng HEPA nếu có.');
 }
 
@@ -1588,9 +1619,9 @@ function initControls() {
         showCustomPlace();
         load();
       },
-      (err) => {
+      () => {
         const banner = $('banner');
-        banner.textContent = t`Không lấy được vị trí của bạn (${err.message}). Hãy chọn thành phố trong danh sách.`;
+        banner.textContent = t("Chưa lấy được vị trí của bạn. Hãy chọn một thành phố trong danh sách.");
         banner.hidden = false;
       },
       { timeout: 10000, maximumAge: 600000 },
@@ -1657,14 +1688,16 @@ function initControls() {
 
 localizeShell();
 initControls();
+initPwa();
+renderDecisionBenchmark($('decision-benchmark'));
 load().then(() => {
   if (location.hash === '#cau-chuyen' && state.series && !$('app').classList.contains('is-loading') && state.weatherStatus !== 'loading') startStory();
 });
-fetchStations().then((list) => {
+fetchStations((time) => showCachedDataNotice('cached-stations', time)).then((list) => {
   state.stations = list;
   if (state.series && !$('app').classList.contains('is-loading')) renderAll();
 });
-fetchAccuracy().then((doc) => {
+fetchAccuracy((time) => showCachedDataNotice('cached-accuracy', time)).then((doc) => {
   state.accuracy = doc;
   if (!state.rawSeries || $('app').classList.contains('is-loading')) return;
   deriveSeries();

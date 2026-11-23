@@ -55,6 +55,7 @@ export async function captureForecast({ read = getJson, revision = null } = {}) 
     schema: 1,
     revision,
     capturedAt: air.fetchedAt,
+    availableAt: new Date().toISOString(),
     cities: CITIES.map(({ id, name, lat, lon }) => ({ id, name, lat, lon })),
     sources: { air, weather, correction },
   };

@@ -156,7 +156,7 @@ export function pairUp(observations, model) {
  * Đọc CSV của kho lưu trữ OpenAQ, chỉ lấy PM2.5 hợp lệ.
  * Cột datetime là thời điểm kết thúc của giờ đo (quy ước của OpenAQ), nên lùi 1 giờ để ra giờ bắt đầu.
  */
-export function parseArchiveCsv(text) {
+export function parseArchiveCsv(text, { minSamplesPerHour = 0 } = {}) {
   const out = [];
   const lines = text.split(/\r?\n/);
   const head = lines.shift()?.split(',').map((h) => h.replace(/"/g, ''));
@@ -170,16 +170,29 @@ export function parseArchiveCsv(text) {
     const value = Number(cells[iValue]);
     const end = Date.parse(cells[iTime]);
     if (!Number.isFinite(value) || !Number.isFinite(end) || value <= 0 || value >= 1000) continue;
-    out.push({ t: end - 3600e3, value });
+    out.push({ end, value });
   }
-  // Một giờ có thể có nhiều cảm biến PM2.5: lấy trung bình
-  const byHour = new Map();
-  for (const o of out) {
-    const v = byHour.get(o.t) ?? [];
-    v.push(o.value);
-    byHour.set(o.t, v);
+  // Có thể có nhiều cảm biến PM2.5 tại cùng mốc đo: lấy trung bình.
+  const byEnd = new Map();
+  for (const { end, value } of out) {
+    const values = byEnd.get(end) ?? [];
+    values.push(value);
+    byEnd.set(end, values);
   }
-  return [...byHour].map(([t, v]) => ({ t, value: v.reduce((a, b) => a + b, 0) / v.length })).sort((a, b) => a.t - b.t);
+  const mean = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  if (!minSamplesPerHour) return [...byEnd].map(([end, values]) => ({ t: end - 3600e3, value: mean(values) }))
+    .sort((a, b) => a.t - b.t);
+
+  // Các mẫu dưới một giờ được xếp vào giờ ngay trước mốc kết thúc ghi trong OpenAQ.
+  const hourly = new Map();
+  for (const [end, valuesAtEnd] of byEnd) {
+    const start = Math.floor((end - 1) / 3600e3) * 3600e3;
+    const values = hourly.get(start) ?? [];
+    values.push(mean(valuesAtEnd));
+    hourly.set(start, values);
+  }
+  return [...hourly].filter(([, values]) => values.length >= minSamplesPerHour)
+    .map(([t, values]) => ({ t, value: mean(values) })).sort((a, b) => a.t - b.t);
 }
 
 // ---------- Lấy dữ liệu ----------
@@ -187,7 +200,7 @@ export function parseArchiveCsv(text) {
 async function fetchText(url, { gzip = false, tries = 3 } = {}) {
   for (let k = 1; ; k++) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return gzip ? gunzipSync(Buffer.from(await res.arrayBuffer())).toString('utf8') : await res.text();
@@ -207,7 +220,7 @@ async function archiveKeys(locationId, months) {
   return keys;
 }
 
-async function observationsFor(station, from, to) {
+export async function observationsFor(station, from, to, options) {
   const months = [];
   for (let d = new Date(from); d <= to; d.setUTCMonth(d.getUTCMonth() + 1, 1)) {
     months.push([d.getUTCFullYear(), String(d.getUTCMonth() + 1).padStart(2, '0')]);
@@ -222,7 +235,7 @@ async function observationsFor(station, from, to) {
   // Tải song song từng nhóm nhỏ để không dồn quá nhiều request một lúc
   for (let i = 0; i < keys.length; i += 8) {
     const texts = await Promise.all(keys.slice(i, i + 8).map((k) => fetchText(`${ARCHIVE}/${k}`, { gzip: true }).catch(() => null)));
-    for (const text of texts) if (text) all.push(...parseArchiveCsv(text));
+    for (const text of texts) if (text) all.push(...parseArchiveCsv(text, options));
   }
   return all;
 }
