@@ -92,6 +92,7 @@ async function checkPlanner(browser) {
   await page.locator('.required-trip').waitFor();
   assert.match(await page.locator('.required-trip').innerText(), /Nếu bắt buộc phải ra ngoài[\s\S]*11:00–12:00[\s\S]*Mức bụi vẫn cao[\s\S]*30 phút/);
   assert.equal(await page.locator('#intro-art').getAttribute('src'), 'assets/saigon-river.webp');
+  assert.match(await page.locator('#intro-caption').innerText(), /Sông Sài Gòn/);
   assert.equal(await page.locator('#org-history').isVisible(), false);
   const audit = page.locator('#decision-benchmark');
   await audit.getByText(/20\/22 lần đổi có đủ số đo/).waitFor();
@@ -105,6 +106,7 @@ async function checkPlanner(browser) {
   benchmarkRow.app.rate = 0.9;
   await page.locator('#language').selectOption('en');
   await audit.getByText(/18\/20 switches lowered PM2.5 \(90%\)/).waitFor();
+  await page.getByText('Dragon Bridge, Da Nang · Illustration', { exact: true }).waitFor();
   await page.locator('.required-trip').waitFor();
   const trip = page.locator('.required-trip');
   assert.match(await trip.innerText(), /If you have to go out[\s\S]*Check the warning for each time/);

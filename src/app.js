@@ -66,7 +66,11 @@ const CHART_RANGES = [
   { id: 'all', label: t('72 giờ') },
 ];
 const STATUS_ICON = { ok: '✅', caution: '⚠️', stop: '⛔' };
-const SCENE_ART = { hcm: 'saigon-river.webp', danang: 'dragon-bridge.webp' };
+const SCENE_ART = {
+  hanoi: { file: 'hoan-kiem.webp', caption: t('Hồ Hoàn Kiếm, Hà Nội · Ảnh minh họa') },
+  hcm: { file: 'saigon-river.webp', caption: t('Sông Sài Gòn, TP. Hồ Chí Minh · Ảnh minh họa') },
+  danang: { file: 'dragon-bridge.webp', caption: t('Cầu Rồng, Đà Nẵng · Ảnh minh họa') },
+};
 const DEFAULT_FREE = '5-22';
 const NEW_SLOT_NAME = 'Hoạt động mới';
 const PRESET_SLOT_NAMES = new Set([
@@ -382,8 +386,12 @@ async function load() {
   }
   if (version !== loadVersion) return;
 
-  const art = 'assets/' + (series.source === 'sample' || state.myPlace ? 'hoan-kiem.webp' : SCENE_ART[city.id] ?? 'hoan-kiem.webp');
+  const landmark = series.source !== 'sample' && Object.hasOwn(SCENE_ART, city.id) ? city.id : 'hanoi';
+  const { file, caption } = SCENE_ART[landmark];
+  const art = 'assets/' + file;
   if ($('intro-art').getAttribute('src') !== art) $('intro-art').setAttribute('src', art);
+  $('intro-caption').textContent = caption;
+  $('city-scene').dataset.landmark = landmark;
   state.rawSeries = series;
   state.weatherStatus = series.source === 'sample' ? 'sample' : 'loading';
   if (series.source === 'sample') Object.assign(state, { history: null, historyKey: null });

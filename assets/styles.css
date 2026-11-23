@@ -1508,6 +1508,7 @@ pre {
     padding-bottom: 18px;
   }
   .intro__art { object-position: 62% center; }
+  .intro:is([data-landmark="hcm"], [data-landmark="danang"]) .intro__art { object-position: 82% center; }
   .intro::after {
     background: linear-gradient(115deg, #071d1df5, #0c1e1b88 64%, #0b1c14ac);
   }

@@ -1,5 +1,8 @@
 // Chuỗi động dùng {0}, {1}, ... cho giá trị mà giao diện chèn vào.
 export const english = {
+  "Hồ Hoàn Kiếm, Hà Nội · Ảnh minh họa": "Hoan Kiem Lake, Hanoi · Illustration",
+  "Sông Sài Gòn, TP. Hồ Chí Minh · Ảnh minh họa": "Saigon River, Ho Chi Minh City · Illustration",
+  "Cầu Rồng, Đà Nẵng · Ảnh minh họa": "Dragon Bridge, Da Nang · Illustration",
   "Đang thu thập số đo. Tỷ lệ chỉ hiện khi có ít nhất {0} lần đổi đủ số đo trong ít nhất {1} ngày.": "Collecting station readings. A rate is shown once at least {0} switches across {1} days have readings for both times.",
   "Tỷ lệ tính trên các lần ClearHour khuyên đổi giờ và có đủ số đo ở cả hai khung. Các khung gần tương đương được tính riêng.": "The rate covers switches ClearHour recommended for which both times have station readings. Similar readings are counted separately.",
   "Báo trước {0} giờ": "{0} hours ahead",
